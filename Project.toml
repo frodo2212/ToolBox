@@ -1,0 +1,13 @@
+name = "ToolBox"
+uuid = "6f6eb9e8-ea3a-4757-83f6-cc30ff1cf90c"
+authors = ["User "]
+version = "0.1.0"
+
+[deps]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+Dates = "ade2ca70-3891-5945-98fb-dc099432e06a"
+FileIO = "5789e2e9-d7fb-5bc7-8068-2c6fae9b9549"
+HDF5 = "f67ccb44-e63f-5c2f-98bd-6dc0ccc4ba2f"
+KM3io = "2cab5852-6f21-4982-99b0-6a4792870cfb"
+Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
