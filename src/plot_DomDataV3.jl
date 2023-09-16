@@ -24,21 +24,6 @@ function plot_DomDataV3_Rings(DomID::Int; T_intervall::Tuple{Integer,Integer}=(0
     return figure
 end
 
-function plot_DomDataV3_PMT(DomID::Integer, PMT::Integer; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
-    file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
-    figure = Figure()
-    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz")
-    Label(figure[0, :], string("Data of Dom ", DomID, " PMT ", PMT), fontsize = 30)
-    Times = read(file["Time"])
-    time_mask = maskTime(Times,T_intervall)
-    scatter!(axf1, Times[time_mask], read(file["pmtmean"])[time_mask,PMT], alpha=alpha)
-    Zeiten, Typ = autoscale_time(minimum(Times), maximum(Int64, Times), intervalls=3)
-    for i in (1:6)
-        axf1.xticks[] = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ)); 
-    end
-    close(file)
-    return figure
-end
 
 function plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/Data_", Dom_object[1],".h5"), "r")
