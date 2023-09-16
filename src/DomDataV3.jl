@@ -108,9 +108,6 @@ function DomDataV3_Floors(detector::Detector, loadpath::String, storagepath::Str
     close(storagefile)
 end
 
-
-
-
 function Search_DomDataV3(bound::Tuple{Integer, Integer}, threshold::Tuple{Integer, Integer};loadpath::String="../Data/DomData_Doms")
     possible_files = readdir(loadpath)
     interesting_Doms = Int64[]
@@ -129,3 +126,15 @@ function Search_DomDataV3(bound::Tuple{Integer, Integer}, threshold::Tuple{Integ
 end
 
 
+function linfit_DomDataV3(Dom_Id::Integer, PMT::Integer; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", return_function::Bool=true)
+    datafile = h5open(string(loadpath, "/Data_", Dom_Id,".h5"), "r")    
+    pmtmean = read(datafile["pmtmean"])[:,PMT]
+    Times = read(datafile["Time"])
+    time_mask = ToolBox.maskTime(Times, T_intervall)
+    close(datafile)
+    Params = linear_fit(Times[time_mask], pmtmean[time_mask])
+    if return_function
+        return f(x)=Params[1]+Params[2]*x
+    end
+    return Params
+end

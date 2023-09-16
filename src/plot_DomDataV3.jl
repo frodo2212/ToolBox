@@ -1,7 +1,7 @@
-function plot_DomDataV3_Rings(DomID::Int; T_max::Int64=0, loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
+function plot_DomDataV3_Rings(DomID::Int; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
     figure = Figure()
-    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") #vllt positionierung ändern
+    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
     axf2 = Axis(figure[2,1], title="frequencies of PMT Ring B", xlabel="Time", ylabel="frequency in Hz")
     axf3 = Axis(figure[3,1], title="frequencies of PMT Ring C", xlabel="Time", ylabel="frequency in Hz")
     axf4 = Axis(figure[1,2], title="frequencies of PMT Ring D", xlabel="Time", ylabel="frequency in Hz")
@@ -10,11 +10,7 @@ function plot_DomDataV3_Rings(DomID::Int; T_max::Int64=0, loadpath::String="../D
     Ax = [axf1, axf2, axf3, axf4, axf5, axf6]
     Label(figure[0, :], string("Data of Dom ", DomID), fontsize = 30)
     Times = read(file["Time"])
-    if T_max != 0
-        time_mask = [time <= T_max for time in Times]
-    else 
-        time_mask = [time != T_max for time in Times]
-    end
+    time_mask = maskTime(Times,T_intervall)
     for ring in (1:length(config.Detector_PMT_Ringe))
         for pmt_number in (1:length(config.Detector_PMT_Ringe[ring]))
             scatter!(Ax[ring], Times[time_mask], read(file["pmtmean"])[:,config.Detector_PMT_Ringe[ring][pmt_number]][time_mask], color=config.Color[pmt_number], alpha=alpha)
@@ -28,17 +24,13 @@ function plot_DomDataV3_Rings(DomID::Int; T_max::Int64=0, loadpath::String="../D
     return figure
 end
 
-function plot_DomDataV3_PMT(DomID::Integer, PMT::Integer; T_max::Int64=0, loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
+function plot_DomDataV3_PMT(DomID::Integer, PMT::Integer; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
     figure = Figure()
-    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") #vllt positionierung ändern
+    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz")
     Label(figure[0, :], string("Data of Dom ", DomID, " PMT ", PMT), fontsize = 30)
     Times = read(file["Time"])
-    if T_max != 0
-        time_mask = [time <= T_max for time in Times]
-    else 
-        time_mask = [time != T_max for time in Times]
-    end
+    time_mask = maskTime(Times,T_intervall)
     scatter!(axf1, Times[time_mask], read(file["pmtmean"])[time_mask,PMT], alpha=alpha)
     Zeiten, Typ = autoscale_time(minimum(Times), maximum(Int64, Times), intervalls=3)
     for i in (1:6)
@@ -48,18 +40,14 @@ function plot_DomDataV3_PMT(DomID::Integer, PMT::Integer; T_max::Int64=0, loadpa
     return figure
 end
 
-function plot_DomDataV3_PMT(Object::Tuple{Integer,Integer}; T_max::Int64=0, loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
-    file = h5open(string(loadpath, "/Data_", Object[1],".h5"), "r")
+function plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
+    file = h5open(string(loadpath, "/Data_", Dom_object[1],".h5"), "r")
     figure = Figure()
-    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") #vllt positionierung ändern
-    Label(figure[0, :], string("Data of Dom ", Object[1], " PMT ", Object[2]), fontsize = 30)
+    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
+    Label(figure[0, :], string("Data of Dom ", Dom_object[1], " PMT ", Dom_object[2]), fontsize = 30)
     Times = read(file["Time"])
-    if T_max != 0
-        time_mask = [time <= T_max for time in Times]
-    else 
-        time_mask = [time != T_max for time in Times]
-    end
-    scatter!(axf1, Times[time_mask], read(file["pmtmean"])[time_mask,Object[2]], alpha=alpha)
+    time_mask = maskTime(Times,T_intervall)
+    scatter!(axf1, Times[time_mask], read(file["pmtmean"])[time_mask,Dom_object[2]], alpha=alpha)
     Zeiten, Typ = autoscale_time(minimum(Times), maximum(Int64, Times), intervalls=3)
     for i in (1:6)
         axf1.xticks[] = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ)); 
@@ -88,7 +76,7 @@ end
 function plot_DataV3_Event(DomID::Integer, event::Tuple{Int64, Int64, Int64}; loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
     figure = Figure()
-    axf1 = Axis(figure[1,1:2], title="frequencies of of Event", xlabel="Time", ylabel="frequency in Hz") #vllt positionierung ändern
+    axf1 = Axis(figure[1,1:2], title="frequencies of of Event", xlabel="Time", ylabel="frequency in Hz") 
     axf2 = Axis(figure[2,1], title="frequencies PMT", xlabel="Time", ylabel="frequency in Hz")
     axf3 = Axis(figure[2,2], title="hrvcount of PMT", xlabel="Time", ylabel="frequency in Hz")
     axf4 = Axis(figure[3,1], title="good_values", xlabel="Time", ylabel="frequency in Hz")
@@ -113,10 +101,10 @@ function plot_DataV3_Event(DomID::Integer, event::Tuple{Int64, Int64, Int64}; lo
     return figure
 end
 
-function plot_DomDataV3_Floors(Floor::Int64; T_max::Int64=0, loadpath::String="../Data", alpha::Float64=1.0)
+function plot_DomDataV3_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/DomDataV3_Floors.h5"), "r")
     figure = Figure()
-    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") #vllt positionierung ändern
+    axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
     axf2 = Axis(figure[2,1], title="frequencies of PMT Ring B", xlabel="Time", ylabel="frequency in Hz")
     axf3 = Axis(figure[3,1], title="frequencies of PMT Ring C", xlabel="Time", ylabel="frequency in Hz")
     axf4 = Axis(figure[1,2], title="frequencies of PMT Ring D", xlabel="Time", ylabel="frequency in Hz")
@@ -125,11 +113,7 @@ function plot_DomDataV3_Floors(Floor::Int64; T_max::Int64=0, loadpath::String=".
     Ax = [axf1, axf2, axf3, axf4, axf5, axf6]
     Label(figure[0, :], string("Data of Floor ", Floor), fontsize = 30)
     Times = read(file["Time"])
-    if T_max != 0
-        time_mask = [time <= T_max for time in Times]
-    else 
-        time_mask = [time != T_max for time in Times]
-    end
+    time_mask = maskTime(Times,T_intervall)
     for ring in (1:length(config.Detector_PMT_Ringe))
         for pmt_number in (1:length(config.Detector_PMT_Ringe[ring]))
             scatter!(Ax[ring], Times[time_mask], read(file["pmtmean"])[Floor,:,config.Detector_PMT_Ringe[ring][pmt_number]][time_mask], color=config.Color[pmt_number], alpha=alpha)

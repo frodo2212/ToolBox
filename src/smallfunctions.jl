@@ -3,7 +3,7 @@
 returns the Direction and Ring of a given PMT in a Standard_Dom
 if given Dom_Id it returns the exact values of given PMT in Dom
 """
-function PMT_Position(det::Detector, PMT::Integer, Dom_Id::Integer=0)
+function PMT_Direction(det::Detector, PMT::Integer, Dom_Id::Integer=0)
     PMT_Ring = Int32[6,5,5,5,6,6,5,6,6,6,5,5,4,3,2,4,4,3,2,2,3,3,1,4,2,2,2,4,3,3,4]
     if Dom_Id != 0 && Dom_Id in collect(keys(det.modules))
         dir_x = det.modules[Dom_Id].pmts[PMT].dir.x
@@ -93,7 +93,20 @@ function optical_DomIds(detector::Detector)
     end
     return optical_Dom_Ids
 end
-
+"""
+Takes the Array of Timestamps and two bounds and masks every Timestamp inside the bound
+"""
+function maskTime(Times, T_intervall::Tuple{Integer,Integer})
+    len = length(Times)
+    if T_intervall[2] != 0
+        T_mask = [(Times[i] >= T_intervall[1] && Times[i] <= T_intervall[2]) for i in (1:len)]
+    elseif T_intervall[1] != 0
+        T_mask = [Times[i] >= T_intervall[1] for i in (1:len)]
+    else 
+        T_mask = ones(Bool, len)
+    end
+    return T_mask
+end
 
 """
 takes a Vector of Vectors and returns a 1d Vector with all the elements
