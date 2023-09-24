@@ -41,7 +41,7 @@ function plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tup
     return figure
 end
 
-function plot_DataV3_Events(Event_dict::Dict{Integer,Any}; loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, temp=true)
+function plot_DataV3_Events(Event_dict::Dict{Integer,Any}; loadpath::String="../Data/DomData_Doms", temp=true)
     interesting_Doms = collect(keys(Event_dict))
     if temp== true
         pictures = readdir("temp_pictures")
@@ -51,38 +51,42 @@ function plot_DataV3_Events(Event_dict::Dict{Integer,Any}; loadpath::String="../
     end
     for Dom in interesting_Doms
         for i in (1:length(Event_dict[Dom]))
-            fig = plot_DataV3_Event(Dom, Event_dict[Dom][i], loadpath=loadpath, alpha=alpha)
+            fig = plot_DataV3_Event(Dom, Event_dict[Dom][i], loadpath=loadpath)
             save(string("temp_pictures/HRF_event",Dom,"_",i,".png"), fig)
         end
     end
 end
 
-#funktioniert, aber bedarf noch verschönerung
-function plot_DataV3_Event(DomID::Integer, event::Tuple{Int64, Int64, Int64}; loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
+function plot_DataV3_Event(DomID::Integer, event::Tuple{Int64, Int64, Int64}; loadpath::String="../Data/DomData_Doms", save::Bool=false)
     file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
     figure = Figure()
-    axf1 = Axis(figure[1,1:2], title="frequencies of of Event", xlabel="Time", ylabel="frequency in Hz") 
-    axf2 = Axis(figure[2,1], title="frequencies PMT", xlabel="Time", ylabel="frequency in Hz")
-    axf3 = Axis(figure[2,2], title="hrvcount of PMT", xlabel="Time", ylabel="frequency in Hz")
-    axf4 = Axis(figure[3,1], title="good_values", xlabel="Time", ylabel="frequency in Hz")
-    axf5 = Axis(figure[3,2], title="fifocount of PMT", xlabel="Time", ylabel="frequency in Hz")
+    axf1 = Axis(figure[1,1:2], title="frequencies of PMT", xlabel="Time", ylabel="frequency in Hz") 
+    axf2 = Axis(figure[2,2], title="frequencies of event", xlabel="Time", ylabel="frequency in Hz")
+    axf3 = Axis(figure[3,1], title="good_values of event", xlabel="Time")
+    axf4 = Axis(figure[3,2], title="hrvcount of event", xlabel="Time", ylabel="hrvcount")
     Times = read(file["Time"])
     event_intervall = event[2]:event[2]+event[3]+30
-    Ax = [axf2, axf3, axf4, axf5]
+    Ax = [axf2, axf3, axf4]
+    #paar mehr Daten ausrechnen:
+    event_mean = round(mean(read(file["pmtmean"])[event_intervall,event[1]]),digits=3)
+    event_max = round(maximum(read(file["pmtmean"])[event_intervall,event[1]]),digits=3)
+    Label(figure[2,1], string("Event of Dom ", DomID, ", PMT ", event[1],"\nEventlength: ",event[3]*10, "min\nmean Frequency=",event_mean,"Hz,\nmax Frequency=",event_max,"Hz"), fontsize = 20, tellheight = false, tellwidth = false, justification=:center)
     scatter!(axf2, Times[event_intervall], read(file["pmtmean"])[event_intervall,event[1]])
     #Nur für testzwecke:
     time_mask = [time <= 1664270856 for time in Times]  #die muss wieder raus/anders geschrieben werden
     scatter!(axf1, Times[time_mask], read(file["pmtmean"])[:,event[1]][time_mask])
-    scatter!(axf3, Times[event_intervall], read(file["hrvcount"])[event_intervall,event[1]])
-    scatter!(axf4, Times[event_intervall], read(file["good_values"])[event_intervall])
-    scatter!(axf5, Times[event_intervall], read(file["fifocount"])[event_intervall,event[1]])
+    scatter!(axf4, Times[event_intervall], read(file["hrvcount"])[event_intervall,event[1]])
+    scatter!(axf3, Times[event_intervall], read(file["good_values"])[event_intervall])
     Zeiten, Typ = ToolBox.autoscale_time(minimum(Times[event_intervall]), maximum(Times[event_intervall]), intervalls=3)
-    for i in (1:4)
+    for i in (1:3)
         Ax[i].xticks[] = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ)); 
     end
     Zeiten, Typ = ToolBox.autoscale_time(minimum(Times[time_mask]), maximum(Times[time_mask]))
     axf1.xticks[] = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ)); 
     close(file)
+    if save
+        save("Bild.png", figure)
+    end
     return figure
 end
 

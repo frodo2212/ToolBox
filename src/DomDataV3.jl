@@ -139,6 +139,23 @@ function linfit_DomDataV3(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple
     return Params
 end
 
+function linfit_DomDataV3_intervalls(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), Intervall::Integer=120, step::Integer=60, loadpath::String="../Data/DomData_Doms", length=100)
+    datafile = h5open(string(loadpath, "/Data_", Dom_object[1],".h5"), "r")    
+    pmtmean = read(datafile["pmtmean"])[:,Dom_object[2]]
+    Times = read(datafile["Time"])
+    close(datafile)
+    if T_intervall == (0,0)
+        Timesteps = collect(range(minimum(Times)+Intervall*30,maximum(Times)-Intervall*30 ,step=step*60))
+    else 
+        Timesteps = collect(range(T_intervall[1]+Intervall*30,T_intervall[2]-Intervall*30 ,step=step*60))
+    end
+    Params = []
+    for i in Timesteps
+        time_mask = ToolBox.maskTime(Times, (i-Intervall*30,i+Intervall*30))
+        push!(Params,linear_fit(Times[time_mask], pmtmean[time_mask]))
+    end
+    return (Timesteps,Params)
+end
 
 #TODO: den Filter verbessern - bisschen willkürlich was ich hier raus filtere
 #TODO: wenn der PMT ne Steigung in der Frequenz hat ist frquency_mean nicht optimal... 

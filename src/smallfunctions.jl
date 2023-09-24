@@ -96,7 +96,7 @@ end
 """
 Takes the Array of Timestamps and two bounds and masks every Timestamp inside the bound
 """
-function maskTime(Times, T_intervall::Tuple{Integer,Integer})
+function maskTime(Times, T_intervall::Tuple{Real,Real})
     len = length(Times)
     if T_intervall[2] != 0
         T_mask = [(Times[i] >= T_intervall[1] && Times[i] <= T_intervall[2]) for i in (1:len)]
@@ -181,3 +181,13 @@ function filternan(array::Vector{T}) where T<:Real
     return neu
 end
 
+function masknan(Vektor::Vector{T}) where T <: Real
+    mask = Vector{Bool}(undef, length(Vektor))
+    for i in (1:length(Vektor))
+        mask[i] = true
+        if isnan(Vektor[i])
+            mask[i] = false
+        end
+    end
+    return mask
+end

@@ -1,5 +1,3 @@
-PMT_count = 31
-
 function extract_DomData(Slices::KM3io.SummarysliceContainer, detector::KM3io.Detector; slice_length=6000, slice_length_threshold=0.8) 
     Start = Slices[1].header.t.s
     End = Slices[length(Slices)].header.t.s 
@@ -104,21 +102,6 @@ function store_DomData(Data::Tuple{UInt32, UInt32, Dict{Int32, Tuple{Vector{Int3
     close(file)
 end 
 
-function DomData(filename::String, detector::KM3io.Detector, storagepath::String)
-    Datei = ROOTFile(filename)
-    Data = extract_DomData(Datei.online.summaryslices, detector)
-    Runnumber = parse(Int32, filename[collect(findlast("000", filename))[3]+1:collect(findlast("000", filename))[3]+5])
-    store_DomData(Data, Runnumber, storagepath)
-end
-
-function DomData_folder(datapath::String, detectorpath::String, storagepath::String)
-    files = readdir(datapath)
-    det = Detector(detectorpath)
-    for file in files
-        DomData(string(datapath, "/",file), det, storagepath)
-    end
-end
-
 function inner_loadDomData(DomId::Int32, file::HDF5.File)
     good_values = read(file[string(DomId)]["good_values"])
     pmtmean = read(file[string(DomId)]["pmtmean"])
@@ -146,7 +129,20 @@ function load_DomData_run(FileName::String, storagepath::String)
     return (Start, End, DataDict, (last_section, last_section_length, slice_length))
 end 
 
+function DomData(filename::String, detector::KM3io.Detector, storagepath::String; slice_length=6000)
+    Datei = ROOTFile(filename)
+    Data = extract_DomData(Datei.online.summaryslices, detector, slice_length=slice_length)
+    Runnumber = parse(Int32, filename[collect(findlast("000", filename))[3]+1:collect(findlast("000", filename))[3]+5])
+    store_DomData(Data, Runnumber, storagepath)
+end
 
+function DomData_folder(datapath::String, detectorpath::String, storagepath::String)
+    files = readdir(datapath)
+    det = Detector(detectorpath)
+    for file in files
+        DomData(string(datapath, "/",file), det, storagepath)
+    end
+end
 
 
 
