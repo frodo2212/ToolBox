@@ -24,9 +24,7 @@ possible Argument: intervalls [default=4] sets the Maximum of generated timestam
 function autoscale_time(time_start::Real, time_end::Real;intervalls::Integer=4)
     time_start = round(Int64, time_start)
     time_end = round(Int64, time_end)
-    #println((time_end-time_start))
     intervall_minutes = (time_end-time_start)/(60*intervalls)
-    #println(intervall_minutes)
     if intervall_minutes <= 60
         Zeiten = DataFrame(dates=unix2datetime(time_start) : Minute(ceil(intervall_minutes)) : unix2datetime(time_end))
         Typ = "mm/dd/yyyyTHH:MM"
@@ -93,6 +91,68 @@ function optical_DomIds(detector::Detector)
     end
     return optical_Dom_Ids
 end
+
+"""
+works just like DateTime for Dates, but doesnt care about argument out of range errors
+"""
+function Date_autocorrect((Year, Month, Day)::Tuple{Integer,Integer,Integer}; Datetime::Bool=true)
+    if Month >= 13
+        Year += floor(Int64, Month/12)
+        Month = Month%12
+    end
+    while Day > daysinmonth(Date(Year, Month))
+        Day -= daysinmonth(Date(Year, Month))
+        Month += 1
+        if Month == 13
+            Month = 1
+            Year += 1
+        end
+    end
+    if Datetime == true
+        return DateTime(Year, Month, Day)
+    else
+        return (Year, Month, Day)
+    end
+end
+
+#TODO: is this function necessary
+function DateTime_autocorrect(Year::Integer, Month::Integer, Day::Integer,Hour::Integer, Minute::Integer; Datetime::Bool=true)
+    Datetime_autocorrect((Year,Month,Day),(Hour,Minute), Datetime=Datetime)
+end
+"""
+works just like DateTime but instead of giving bound errors it calculates a corresponding date
+"""
+function DateTime_autocorrect((Year, Month, Day)::Tuple{Integer,Integer,Integer}, (Hour, Minute)::Tuple{Integer,Integer}; Datetime::Bool=true)
+    Day_from_time = 0
+    if Minute >= 60
+        Hour += floor(Int64, Minute/60)
+        Minute = Minute%60
+    end
+    if Hour >= 24
+        Day_from_time += floor(Int64, Hour/24)
+        Hour = Hour%24
+    end
+    year, month, day = Date_autocorrect((Year, Month, Day+Day_from_time), Datetime=false)
+    if Datetime
+        return DateTime(year, month, day, Hour, Minute)
+    else 
+        return year, month, day+Day_from_time, Hour, Minute
+    end
+end
+
+#TODO: find a better Name and maybe a better argument structure
+function T_intervall2(Start::Tuple{Integer,Integer,Integer}=(0,0,0), Intervall::Tuple{Integer,Integer,Integer}=(0,0,0))
+    start_DT = Date_autocorrect(Start)
+    end_DT = Date_autocorrect((Start[1]+Intervall[1],Start[2]+Intervall[2],Start[3]+Intervall[3])) 
+    return (Int64(datetime2unix(start_DT)), Int64(datetime2unix(end_DT)))
+end
+
+function T_intervall(Start_Date::Tuple{Integer,Integer,Integer}, End_Date::Tuple{Integer,Integer,Integer}; Start_Time=(0,0), End_Time=(0,0))
+    Start = DateTime_autocorrect(Start_Date, Start_Time)
+    End = DateTime_autocorrect(End_Date, End_Time)
+    return (Int64(datetime2unix(Start)), Int64(datetime2unix(End)))
+end
+
 """
 Takes the Array of Timestamps and two bounds and masks every Timestamp inside the bound
 """
@@ -153,7 +213,7 @@ takes a Vector and removes all Elements that are Zero
 """
 function filterzero(array::Vector{T}) where T<:Real
     len = length(array)-count(j->(j==0), array)
-    neu = Vector{}(undef, len)
+    neu = Vector{T}(undef, len)
     j=0
     for i in (1:length(array))
         if array[i] == 0

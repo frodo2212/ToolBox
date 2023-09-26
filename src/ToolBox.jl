@@ -1,6 +1,6 @@
 module ToolBox
 
-#die ganzen Module, die verwendet werden
+#all the used Modules
 using HDF5
 using KM3io
 using Statistics
@@ -8,8 +8,12 @@ using Dates
 using CairoMakie
 using DataFrames #brauch ich das überhaupt?
 using FileIO
-#using CurveFit
+using CurveFit
 
+export DomData, DomDataV3, DomDataV3_Floors
+export Search_DomDataV3, linfit_DomDataV3, linfit_DomDataV3_intervalls, intensiveSearch_DomDataV3
+export optical_DomIds, maskTime, PMT_Direction, pos_Strings, Floors
+export DateTime_autocorrect, T_intervall, T_intervall2
 
 module config 
     #Arrays with random colors/markers, to better apply a specific color/marker to plots
@@ -29,7 +33,5 @@ include("DomData.jl")
 include("DomDataV3.jl")
 include("plot_DomDataV3.jl")
 
-
-#when do i insert the exports of functions?
 
 end 

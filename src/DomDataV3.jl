@@ -1,4 +1,4 @@
-function DomDataV3(Dom_Id::Integer, loadpath::String, storagepath::String; files::Vector{String}=String[], slice_length::Int64=6000)
+function DomDataV3(Dom_Id::Integer, loadpath::String, storagepath::String; files::Vector{String}=String[], slice_length::Integer=6000)
     possible_files = readdir(loadpath) #use glob to check whether the files are useable?
     if files == String[]  #if nothing given use all files
         files = possible_files

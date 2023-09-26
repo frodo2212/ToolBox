@@ -1,4 +1,4 @@
-function extract_DomData(Slices::KM3io.SummarysliceContainer, detector::KM3io.Detector; slice_length=6000, slice_length_threshold=0.8) 
+function extract_DomData(Slices::KM3io.SummarysliceContainer, detector::KM3io.Detector; slice_length=6000, slice_length_threshold=0.7) 
     Start = Slices[1].header.t.s
     End = Slices[length(Slices)].header.t.s 
     sections = floor(Int32, length(Slices)/slice_length)
@@ -77,10 +77,10 @@ function extract_DomData(Slices::KM3io.SummarysliceContainer, detector::KM3io.De
     return (Start, End, Data, (last_section, last_section_length, slice_length))
 end
 
-function store_DomData(Data::Tuple{UInt32, UInt32, Dict{Int32, Tuple{Vector{Int32}, Matrix{Float64}, Matrix{Int32}, Matrix{Int32}}}, Tuple{Bool, Int64, Int64}}, Run::Int32, storagepath::String)
+function store_DomData(Data::Tuple{UInt32, UInt32, Dict{Int32, Tuple{Vector{Int32}, Matrix{Float64}, Matrix{Int32}, Matrix{Int32}}}, Tuple{Bool, Integer, Integer}}, Run::Int32, storagepath::String)
     Dom_ids = collect(keys(Data[3]))
     len = length(Data[3][Dom_ids[1]][1])
-    mkpath(storagepath)
+    #mkpath(storagepath)
     file = h5open(string(storagepath,"/",Run,"_",Int32(Data[4][3]/600),".h5"), "w")
     for Dom in Dom_ids
         create_group(file, string(Dom))
@@ -143,13 +143,4 @@ function DomData_folder(datapath::String, detectorpath::String, storagepath::Str
         DomData(string(datapath, "/",file), det, storagepath)
     end
 end
-
-
-
-
-
-
-
-
-
 
