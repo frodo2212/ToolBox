@@ -1,15 +1,14 @@
 function extract_DomData(Slices::KM3io.SummarysliceContainer, detector::KM3io.Detector; slice_length=6000, slice_length_threshold=0.7) 
     Start = Slices[1].header.t.s
-    End = Slices[length(Slices)].header.t.s 
-    sections = floor(Int32, length(Slices)/slice_length)
-    last_section_length = length(Slices)%slice_length
+    len = Int64(length(Slices))
+    End = Slices[len].header.t.s 
+    sections = floor(Int32, len/slice_length)
+    last_section_length = len%slice_length
     last_section = last_section_length >= (slice_length*slice_length_threshold)
     Dom_ids = optical_DomIds(detector)
     Dom_count = length(Dom_ids) 
     array_pos = Dict(Dom_ids[i]=>(1:Dom_count)[i] for i in (1:Dom_count))
     Data = Dict{Int64, Tuple{Array{Int32},Array{Float64},Array{Int32},Array{Int32}}}(Id=>(zeros(Int32,sections+last_section),zeros(Float64,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section)) for Id in Dom_ids)
-    #funktioniert das so, dass ich das flobale dict ändere oder muss dazu global davor und ich übergebe es dann nicht?
-        #sollte funktionieren 
     for i in (1:sections)
         inner_extract_DomData(Slices, slice_length, array_pos, i, Dom_count, Dom_ids, Data)
     end
