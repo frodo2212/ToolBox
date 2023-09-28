@@ -5,7 +5,6 @@ using HDF5
 using KM3io
 using Statistics
 using Dates
-using CairoMakie
 using DataFrames #brauch ich das überhaupt?
 using FileIO
 using CurveFit
@@ -31,7 +30,6 @@ PMT_count = 31
 include("smallfunctions.jl")
 include("DomData.jl")
 include("DomDataV3.jl")
-include("plot_DomDataV3.jl")
 
 
 end 

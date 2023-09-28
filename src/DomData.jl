@@ -5,76 +5,57 @@ function extract_DomData(Slices::KM3io.SummarysliceContainer, detector::KM3io.De
     last_section_length = length(Slices)%slice_length
     last_section = last_section_length >= (slice_length*slice_length_threshold)
     Dom_ids = optical_DomIds(detector)
-    Dom_count = length(Dom_ids)
+    Dom_count = length(Dom_ids) 
     array_pos = Dict(Dom_ids[i]=>(1:Dom_count)[i] for i in (1:Dom_count))
-    Data = Dict(Id=>(zeros(Int32,sections+last_section),zeros(Float64,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section)) for Id in Dom_ids)
+    Data = Dict{Int64, Tuple{Array{Int32},Array{Float64},Array{Int32},Array{Int32}}}(Id=>(zeros(Int32,sections+last_section),zeros(Float64,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section)) for Id in Dom_ids)
+    #funktioniert das so, dass ich das flobale dict ändere oder muss dazu global davor und ich übergebe es dann nicht?
+        #sollte funktionieren 
     for i in (1:sections)
-        inner_hrvcount = zeros(Int32, Dom_count, PMT_count)
-        inner_fifocount = zeros(Int32, Dom_count, PMT_count)
-        frequencies = zeros(Float64, Dom_count, PMT_count, slice_length)
-        good_values = zeros(Int32, Dom_count)
-        for j in (1:slice_length)
-            for id in (1:length(Slices[(i-1)*slice_length+j].frames))
-                frame = Slices[(i-1)*slice_length+j].frames[id]
-                position = array_pos[frame.dom_id]
-                good_values[position] +=1
-                F = pmtrates(frame)
-                if wrstatus(frame) == false 
-                    continue
-                end                         
-                if hrvstatus(frame) == true || fifostatus(frame) == true
-                    for pmt in (1:PMT_count)
-                        if hrvstatus(frame, pmt-1) == true || fifostatus(frame, pmt-1) == true
-                            F[pmt] = 0
-                        end
-                        inner_hrvcount[position, pmt] += hrvstatus(frame, pmt-1)
-                        inner_fifocount[position, pmt] += fifostatus(frame, pmt-1)
-                    end
-                end
-                frequencies[position,:,j] = F
-            end 
-        end
-        for allDoms in Dom_ids
-            Data[allDoms][1][i] = good_values[array_pos[allDoms]]
-            Data[allDoms][2][:,i] = [mean(filterzero(frequencies[array_pos[allDoms],i,:])) for i in (1:PMT_count)]
-            Data[allDoms][3][:,i] = inner_hrvcount[array_pos[allDoms],:]
-            Data[allDoms][4][:,i] = inner_fifocount[array_pos[allDoms],:]
-        end
+        inner_extract_DomData(Slices, slice_length, array_pos, i, Dom_count, Dom_ids, Data)
     end
     if last_section
-        inner_hrvcount = zeros(Int32, Dom_count, PMT_count)
-        inner_fifocount = zeros(Int32, Dom_count, PMT_count)
-        frequencies = zeros(Float64, Dom_count, PMT_count, last_section_length)
-        good_values = zeros(Int32, Dom_count)
-        for j in (1:last_section_length)  #vielleicht die Schleife auslagern in Funktion, da zweimal verwendet?
-            for id in (1:length(Slices[sections*slice_length+j].frames))
-                frame = Slices[sections*slice_length+j].frames[id]
-                position = array_pos[frame.dom_id]
-                good_values[position] +=1
-                F = pmtrates(frame)
-                if wrstatus(frame) == false 
-                    continue
-                end                         
-                if hrvstatus(frame) == true || fifostatus(frame) == true
-                    for pmt in (1:PMT_count)
-                        if hrvstatus(frame, pmt-1) == true || fifostatus(frame, pmt-1) == true
-                                F[pmt] = 0
-                        end
-                        inner_hrvcount[position, pmt] += hrvstatus(frame, pmt-1)
-                        inner_fifocount[position, pmt] += fifostatus(frame, pmt-1)
-                    end
-                end
-                frequencies[position,:,j] = F
-            end 
-        end
-        for allDoms in Dom_ids
-            Data[allDoms][1][sections+1] = good_values[array_pos[allDoms]]
-            Data[allDoms][2][:,sections+1] = [mean(filterzero(frequencies[array_pos[allDoms],i,:])) for i in (1:PMT_count)]
-            Data[allDoms][3][:,sections+1] = inner_hrvcount[array_pos[allDoms],:]
-            Data[allDoms][4][:,sections+1] = inner_fifocount[array_pos[allDoms],:]
-        end
+        inner_extract_DomData(Slices, last_section_length, array_pos, sections+1, Dom_count, Dom_ids, Data)
     end 
     return (Start, End, Data, (last_section, last_section_length, slice_length))
+end
+
+function inner_extract_DomData(Slices::KM3io.SummarysliceContainer, slice_length::Integer, array_pos, i::Integer, Dom_count::Integer, Dom_ids, Data)
+    frequencies, inner_hrvcount, inner_fifocount, good_values = extract_loops(Slices, slice_length, array_pos, i, Dom_count)
+    for allDoms in Dom_ids
+        Data[allDoms][1][i] = good_values[array_pos[allDoms]]
+        Data[allDoms][2][:,i] = [mean(filterzero(frequencies[array_pos[allDoms],i,:])) for i in (1:PMT_count)]
+        Data[allDoms][3][:,i] = inner_hrvcount[array_pos[allDoms],:]
+        Data[allDoms][4][:,i] = inner_fifocount[array_pos[allDoms],:]
+    end
+end
+
+function extract_loops(Slices::KM3io.SummarysliceContainer, slice_length::Integer, array_pos, i::Integer, Dom_count::Integer)
+    inner_hrvcount = zeros(Int32, Dom_count, PMT_count)
+    inner_fifocount = zeros(Int32, Dom_count, PMT_count)
+    frequencies = zeros(Float64, Dom_count, PMT_count, slice_length)
+    good_values = zeros(Int32, Dom_count)
+    for j in (1:slice_length)
+        for id in (1:length(Slices[(i-1)*slice_length+j].frames))
+            frame = Slices[(i-1)*slice_length+j].frames[id]
+            position = array_pos[frame.dom_id]
+            good_values[position] +=1
+            F = pmtrates(frame)
+            !wrstatus(frame) && continue                 
+            if hrvstatus(frame) || fifostatus(frame)
+                for pmt in (1:PMT_count)
+                    loc_hrv = hrvstatus(frame, pmt-1)
+                    loc_fifo = fifostatus(frame, pmt-1)
+                    if  loc_hrv ||  loc_fifo
+                        F[pmt] = 0
+                    end
+                    inner_hrvcount[position, pmt] += loc_hrv
+                    inner_fifocount[position, pmt] += loc_fifo
+                end
+            end
+            frequencies[position,:,j] = F
+        end 
+    end
+    return (frequencies, inner_hrvcount, inner_fifocount, good_values)
 end
 
 function store_DomData(Data::Tuple{UInt32, UInt32, Dict{Int32, Tuple{Vector{Int32}, Matrix{Float64}, Matrix{Int32}, Matrix{Int32}}}, Tuple{Bool, Integer, Integer}}, Run::Int32, storagepath::String)

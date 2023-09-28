@@ -1,0 +1,73 @@
+Funktionen
+
+DomData                 ALLES NOCHMAL TESTEN      
+    extract_DomData                 getestet 28.09.
+    inner_extract_DomData           getestet 28.09.
+    extract_loops                   getestet 28.09.
+    store_DomData                   getestet
+    DomData                         getestet
+    DomData_folder                  getestet alt        eigentlich unnötig, die brauche ich seit snakemake nicht mehr
+    inner_loadDomData               getestet        
+    load_DomData_run                getestet
+
+DomDataV3
+    DomDataV3                       getestet 13.09.
+    allDomDataV3                    getestet 14.09.
+    Search_DomDataV3                getestet 14.09.
+    DomDataV3_Floors                getestet 14.09.
+    linfit_DomDataV3                getestet 15.09.
+    intensiveSearch_DomDataV3       getestet 15.09.     hier muss noch Arbeit rein - den Ergebnissen nicht vertrauen
+
+plot_DomDataV3
+    plot_DomDataV3_PMT          testen
+    plot_DomDataV3_Floors           getestet 14.09.
+    plot_DomDataV3_Rings            getestet 14.09.
+    plot_DataV3_Events              getestet 16.09.
+    plot_DataV3_Event               getestet 16.09.
+    
+smallfunctions
+    pos_Strings                     getestet 14.09.
+    optical_DomIds                  getestet 14.09.
+    PMT_Direction                   getestet 13.09.
+    autoscale_time                  getestet 12.09.
+    Floors                          getestet 12.09.
+    T_intervall                     getestet 25.09.
+    T_intervall2                    getestet 25.09.
+    Date_autocorrect                getestet 25.09.
+    DateTime_autocorrect            getestet 25.09.
+    vectorize                       getestet 14.09.
+    maskzero                        getestet 14.09.
+    filterzero                      getestet 14.09.
+    filterzero                      getestet 14.09.
+    filternan                       getestet 13.09.
+    maskTime                        getestet 15.09.
+
+
+
+
+
+Data                            
+    extract_Data                    getestet
+    store_Data                      getestet
+    load_Data_run                   getestet
+    Data                            getestet
+    Data_folder                     getestet
+    compress_Data                   getestet
+    load_Data                       getestet
+    plot_File                       getestet
+
+DomDataV1
+    mean_DomDataV1                  getestet
+    meanDomDataV1_sortFloors        getestet
+    plotPMTDataV1_Rings         testen
+    plotDomDataV1_Rings         testen
+    plotDomDataV1               testen
+    compress_DomDataV1              getestet
+
+DomDataV2
+    meanDomDataV2               testen  #speichern jetzt auch hrv,good_v
+    meanDomDataV2_sortFloors    testen  #speichern jetzt auch hrv,good_v
+    plot_DomDataV2_Rings            getestet 
+    Search_DomDataV2                getestet 
+    plot_DomDataV2_Floors_Rings testen
+    compress_DomDataV2              getestet
