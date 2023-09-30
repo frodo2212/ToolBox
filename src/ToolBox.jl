@@ -7,6 +7,7 @@ using Dates
 using DataFrames #brauch ich das überhaupt?
 using FileIO
 using CurveFit
+using glob
 
 export Data, DomData, DomData_Floors
 export Search_DomData, linfit_DomData, linfit_DomData_intervalls, intensiveSearch_DomData
