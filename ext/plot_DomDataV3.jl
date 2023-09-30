@@ -41,7 +41,7 @@ function plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tup
     return figure
 end
 
-function plot_DataV3_Events(Event_dict::Dict{Integer,Any}; loadpath::String="../Data/DomData_Doms", temp=true)
+function plot_DataV3_Events_alt(Event_dict::Dict{Integer,Any}; loadpath::String="../Data/DomData_Doms", temp=true)
     interesting_Doms = collect(keys(Event_dict))
     if temp== true
         pictures = readdir("temp_pictures")
@@ -57,7 +57,7 @@ function plot_DataV3_Events(Event_dict::Dict{Integer,Any}; loadpath::String="../
     end
 end
 
-function plot_DataV3_Event(DomID::Integer, event::Tuple{Int64, Int64, Int64}; loadpath::String="../Data/DomData_Doms", save::Bool=false)
+function plot_DataV3_Event_alt(DomID::Integer, event::Tuple{Int64, Int64, Int64}; loadpath::String="../Data/DomData_Doms", save::Bool=false)
     file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1:2], title="frequencies of PMT", xlabel="Time", ylabel="frequency in Hz") 

@@ -6,20 +6,20 @@ DomData                 ALLES NOCHMAL TESTEN
     extract_loops                   getestet 28.09.
     store_DomData                   getestet
     DomData                         getestet
-    DomData_folder                  getestet alt        eigentlich unnötig, die brauche ich seit snakemake nicht mehr
+    DomData_folder                  getestet - alt        
     inner_loadDomData               getestet        
     load_DomData_run                getestet
 
 DomDataV3
     DomDataV3                       getestet 13.09.
-    allDomDataV3                    getestet 14.09.
+    allDomDataV3                    getestet 14.09. - alt
     Search_DomDataV3                getestet 14.09.
     DomDataV3_Floors                getestet 14.09.
     linfit_DomDataV3                getestet 15.09.
     intensiveSearch_DomDataV3       getestet 15.09.     hier muss noch Arbeit rein - den Ergebnissen nicht vertrauen
 
 plot_DomDataV3
-    plot_DomDataV3_PMT          testen
+    plot_DomDataV3_PMT              getestet 29.09.
     plot_DomDataV3_Floors           getestet 14.09.
     plot_DomDataV3_Rings            getestet 14.09.
     plot_DataV3_Events              getestet 16.09.
@@ -44,7 +44,7 @@ smallfunctions
 
 
 
-
+Aussortierte Skripte
 
 Data                            
     extract_Data                    getestet
@@ -65,8 +65,8 @@ DomDataV1
     compress_DomDataV1              getestet
 
 DomDataV2
-    meanDomDataV2               testen  #speichern jetzt auch hrv,good_v
-    meanDomDataV2_sortFloors    testen  #speichern jetzt auch hrv,good_v
+    meanDomDataV2               testen  
+    meanDomDataV2_sortFloors    testen  
     plot_DomDataV2_Rings            getestet 
     Search_DomDataV2                getestet 
     plot_DomDataV2_Floors_Rings testen
