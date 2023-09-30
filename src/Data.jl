@@ -60,8 +60,8 @@ end
 function store_Data(Data::Tuple{UInt32, UInt32, Dict{Int32, Tuple{Vector{Int32}, Matrix{Float64}, Matrix{Int32}, Matrix{Int32}}}, Tuple{Bool, Integer, Integer}}, Run::Int32, storagepath::String)
     Dom_ids = collect(keys(Data[3]))
     len = length(Data[3][Dom_ids[1]][1])
-    mkpath(string(storagepath,"/Run_",Run,"_",Int32(Data[4][3]/600),".h5"))
-    file = h5open(string(storagepath,"/Run_",Run,"_",Int32(Data[4][3]/600),".h5"), "w")
+    mkpath(storagepath)
+    file = h5open(string(storagepath,"/",Run,"_",Int32(Data[4][3]/600),".h5"), "w")
     for Dom in Dom_ids
         create_group(file, string(Dom))
         dset = create_dataset(file[string(Dom)], "good_values", Int32, (len,))
