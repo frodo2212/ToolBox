@@ -1,6 +1,6 @@
 Funktionen
 
-DomData                 ALLES NOCHMAL TESTEN      
+Data                ALLES NOCHMAL TESTEN      
     extract_DomData                 getestet 28.09.
     inner_extract_DomData           getestet 28.09.
     extract_loops                   getestet 28.09.
@@ -10,15 +10,25 @@ DomData                 ALLES NOCHMAL TESTEN
     inner_loadDomData               getestet        
     load_DomData_run                getestet
 
-DomDataV3
+DomData
     DomDataV3                       getestet 13.09.
     allDomDataV3                    getestet 14.09. - alt
-    Search_DomDataV3                getestet 14.09.
     DomDataV3_Floors                getestet 14.09.
-    linfit_DomDataV3                getestet 15.09.
-    intensiveSearch_DomDataV3       getestet 15.09.     hier muss noch Arbeit rein - den Ergebnissen nicht vertrauen
 
-plot_DomDataV3
+DomData_search
+    Search_DomDataV3                getestet 14.09.
+    intensiveSearch_DomData_test2
+    intensiveSearch_DomData_test1
+    intSearch_PMT
+    linfit_DomData                      - vllt in DomData lassen?
+    linfit_DomData_intervalls           - vllt in DomData lassen?
+    inner_linfit_intervalls
+    Search_linFit_test2
+    inner_Search_linFit_test2
+    Search_linFit_test1
+
+    das ist in die Extension ausgelagert
+plot_DomData
     plot_DomDataV3_PMT              getestet 29.09.
     plot_DomDataV3_Floors           getestet 14.09.
     plot_DomDataV3_Rings            getestet 14.09.

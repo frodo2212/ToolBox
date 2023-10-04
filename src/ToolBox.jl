@@ -7,13 +7,14 @@ using Dates
 using DataFrames #brauch ich das überhaupt?
 using FileIO
 using CurveFit
-using glob
+using Glob
 
 export Data, DomData, DomData_Floors
 export Search_DomData, linfit_DomData, linfit_DomData_intervalls, intensiveSearch_DomData
 export optical_DomIds, maskTime, PMT_Direction, pos_Strings, Floors
 export DateTime_autocorrect, T_intervall, T_intervall2
 export autoscale_time
+export Event, linfitData
 
 module config 
     # export PMT_count
@@ -32,8 +33,8 @@ PMT_count = 31
 include("smallfunctions.jl")
 include("Data.jl")
 include("DomData.jl")
-# include("old_Search_Functions.jl")
+include("DomData_search.jl")
+include("emptyplotfunctions.jl")
 
-# include("../ext/ToolBoxPlottingExt.jl")
 
 end 

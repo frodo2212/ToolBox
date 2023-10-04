@@ -1,4 +1,5 @@
-function plot_DomDataV3_Rings(DomID::Int; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
+
+function ToolBox.plot_DomDataV3_Rings(DomID::Int; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
@@ -25,7 +26,7 @@ function plot_DomDataV3_Rings(DomID::Int; T_intervall::Tuple{Integer,Integer}=(0
 end
 
 
-function plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
+function ToolBox.plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/Data_", Dom_object[1],".h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
@@ -41,7 +42,7 @@ function plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tup
     return figure
 end
 
-function plot_DataV3_Events_alt(Event_dict::Dict{Integer,Any}; loadpath::String="../Data/DomData_Doms", temp=true)
+function ToolBox.plot_DataV3_Events_alt(Event_dict::Dict{Integer,Any}; loadpath::String="../Data/DomData_Doms", temp=true)
     interesting_Doms = collect(keys(Event_dict))
     if temp== true
         pictures = readdir("temp_pictures")
@@ -57,7 +58,7 @@ function plot_DataV3_Events_alt(Event_dict::Dict{Integer,Any}; loadpath::String=
     end
 end
 
-function plot_DataV3_Event_alt(DomID::Integer, event::Tuple{Int64, Int64, Int64}; loadpath::String="../Data/DomData_Doms", save::Bool=false)
+function ToolBox.plot_DataV3_Event_alt(DomID::Integer, event::Tuple{Int64, Int64, Int64}; loadpath::String="../Data/DomData_Doms", save::Bool=false)
     file = h5open(string(loadpath, "/Data_", DomID,".h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1:2], title="frequencies of PMT", xlabel="Time", ylabel="frequency in Hz") 
@@ -90,7 +91,7 @@ function plot_DataV3_Event_alt(DomID::Integer, event::Tuple{Int64, Int64, Int64}
     return figure
 end
 
-function plot_DomDataV3_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
+function ToolBox.plot_DomDataV3_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/DomDataV3_Floors.h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 

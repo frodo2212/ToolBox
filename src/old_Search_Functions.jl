@@ -1,6 +1,9 @@
+#Die funktion zählt in einem intervall die Frequenzwerte innerhalb der bound
+#sind genug frequenzwerte drin, erhält man ein Event - ob diese am stück drüber sind ist irrelevant
+#solange genug drüber bleiben ist alles das selbe Event - eventlength wächst
+#ein neues Event startet, wenn es zwischendurch mal Timesteps gab für die die Bedingung nicht erfüllt war 
+#
 #TODO: den Filter verbessern - bisschen willkürlich was ich hier raus filtere
-#TODO: wenn der PMT ne Steigung in der Frequenz hat ist frquency_mean nicht optimal... 
-# Rückgabewerte sind bisschen random, das wurde verbessert
 function intensiveSearch_DomDataV3(bound::Tuple{Integer, Integer}, threshold::Tuple{Integer, Integer};loadpath::String="../Data/DomData_Doms", length=30)
     int_Doms = ToolBox.Search_DomDataV3(bound, (threshold[1],500), loadpath=loadpath)
     interesting_Doms = Dict{Integer,Any}()
@@ -16,6 +19,7 @@ function intensiveSearch_DomDataV3(bound::Tuple{Integer, Integer}, threshold::Tu
         end
         for pmt in (1:PMT_count)
             frequency_mean = mean(pmtmeans[:,pmt])
+            #TODO: wenn der PMT ne Steigung in der Frequenz hat ist frquency_mean nicht optimal... 
             if bound[1]-frequency_mean >= 2000 #auf was ich die empfindlichkeit setze ist so die frage
                 event = 0
                 event_length = 0
@@ -36,7 +40,8 @@ function intensiveSearch_DomDataV3(bound::Tuple{Integer, Integer}, threshold::Tu
                 end
             end
         end
-        if event_data != Any[]         
+        if event_data != Any[]     
+            # Rückgabewerte sind bisschen random, in neuer funktion verbessert 
             merge!(interesting_Doms, Dict(Dom=>event_data))
         end
         close(datafile)
