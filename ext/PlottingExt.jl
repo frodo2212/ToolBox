@@ -13,11 +13,8 @@ module PlottingExt
     #funktionen ohne parameter gehen nicht, da er dann die aus den emptyplotfunctions nimmt
     #bzw gehen schon, wenn man in emptyplotfunctions halt andere parameter angibt
     #TODO: Tamas fragen wie das richtig gehen sollte, das kanns so ja eigentlichnicht sein
-    function ToolBox.test()
-        println("Juhuu es funktioniert")
-    end
 
-    include("plot_DomData_alt.jl")
+    include("plot_DomData.jl")
 
 
 end

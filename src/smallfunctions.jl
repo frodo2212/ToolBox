@@ -13,7 +13,7 @@ function PMT_Direction(det::Detector, PMT::Integer, Dom_Id::Integer=0)
         dir_x = 0 #das hier noch anders gestalten
         dir_y = 0 #gibts den standard DOM schon, aus dem ich die geometrie raus lesen kann?
         standard_dirz = [-1,-0.850,-0.555,-0.295,0.295,0.555]
-        dir_z = standard_dirz[PMT_Ring[PMT]]
+        dir_z = standard_dirz[config.Detector_PMT_Ring[PMT]]
     end
     return ((dir_x, dir_y, dir_z), PMT_Ring[PMT])
 end
@@ -47,8 +47,9 @@ floor_size = Number of Doms on a floor
 """
 function Floors(detector::Detector)
     #das muss doch schlauer gehen!
-    floors = collect(0:maximum([collect(keys(detector.locations))[i][2] for i in (1:length(keys(detector.locations)))]))
-    max_floor = maximum(floors)
+    max_floor = maximum([collect(keys(detector.locations))[i][2] for i in (1:length(keys(detector.locations)))])
+    min_floor = minimum([collect(keys(detector.locations))[i][2] for i in (1:length(keys(detector.locations)))])
+    floors = collect(min_floor:max_floor)
     Doms_on_Floor = Dict(i=>Int32[] for i in floors)
     for i in floors
         for j in detector.strings
@@ -117,26 +118,28 @@ end
 
 #TODO: is this function necessary
 function DateTime_autocorrect(Year::Integer, Month::Integer, Day::Integer,Hour::Integer, Minute::Integer; Datetime::Bool=true)
-    return Datetime_autocorrect((Year,Month,Day),Time=(Hour,Minute), Datetime=Datetime)
+    return DateTime_autocorrect((Year,Month,Day),Time=(Hour,Minute), Datetime=Datetime)
 end
 """
 works just like DateTime but instead of giving bound errors it calculates a corresponding date
 """
 function DateTime_autocorrect((Year, Month, Day)::Tuple{Integer,Integer,Integer}; Time=(0,0), Datetime::Bool=true)
     Day_from_time = 0
-    if Time[1] >= 60
-        Time[2] += floor(Int64, Time[1]/60)
-        Time[1] = Time[1]%60
+    Hour = Time[1]
+    Minute = Time[2]
+    if Minute >= 60
+        Hour += floor(Int64, Minute/60)
+        Minute = Minute%60
     end
-    if Time[2] >= 24
-        Day_from_time += floor(Int64, Time[2]/24)
-        Time[2] = Time[2]%24
+    if Hour >= 24
+        Day_from_time += floor(Int64, Hour/24)
+        Hour = Hour%24
     end
     year, month, day = inner_DateTime_autocorrect((Year, Month, Day+Day_from_time), Datetime=false)
     if Datetime
-        return DateTime(year, month, day, Time[2], Time[1])
+        return DateTime(year, month, day, Hour, Minute)
     else 
-        return year, month, day+Day_from_time, Time[2], Time[1]
+        return year, month, day+Day_from_time, Hour, Minute
     end
 end
 

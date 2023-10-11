@@ -1,19 +1,5 @@
-function test(t::Integer)
-    print(t)
-end
-
-function plot_DomDataV3_Floors()
-    println("Extension not loaded")
-end
-function plot_DataV3_Event_alt()
-    println("Extension not loaded")
-end
-function plot_DataV3_Events_alt()
-    println("Extension not loaded")
-end
-function plot_DomDataV3_PMT()
-    println("Extension not loaded")
-end
-function plot_DomDataV3_Rings()
-    println("Extension not loaded")
-end
+plot_DomDataV3_Floors() = error("Extension not loaded")
+plot_DataV3_Event_alt() = error("Extension not loaded")
+plot_DataV3_Events_alt() = error("Extension not loaded")
+plot_DomDataV3_PMT() = error("Extension not loaded")
+plot_DomDataV3_Rings() = error("Extension not loaded")

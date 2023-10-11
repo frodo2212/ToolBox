@@ -4,6 +4,7 @@ this number must lie inside the threshold values
 """
 function Search_DomData(bound::Tuple{Integer, Integer}, threshold::Tuple{Integer, Integer};loadpath::String="../Data/DomData_Doms")
     possible_files = readdir(loadpath)
+    possible_files = [files for files in possible_files if files[1:5] == "Data_"]
     interesting_Doms = Int64[]
     for file in possible_files
         datafile = h5open(string(loadpath, "/", file), "r")
@@ -23,7 +24,7 @@ function intensiveSearch_DomData_test2(detector, bound::Tuple{Integer, Integer};
     Dom_ids = optical_DomIds(detector)
     globalEvents = Event[]
     for Dom in Dom_ids
-        Events = intensiveSearch_DomDataV3_test1(Dom, bound, threshold=threshold, loadpath=loadpath)
+        Events = intensiveSearch_DomData_test1(Dom, bound, threshold=threshold, loadpath=loadpath)
         append!(globalEvents, Events)
     end
     return globalEvents
@@ -105,12 +106,18 @@ function linfit_DomData(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{I
     pmtmean = read(datafile["pmtmean"])[:,Dom_object[2]]
     Times = read(datafile["Time"])
     time_mask = ToolBox.maskTime(Times, T_intervall)
-    close(datafile)
-    Params = linear_fit(Times[time_mask], pmtmean[time_mask])
+    Start = minimum(Times[time_mask])
+    fit_Times = Times[time_mask]
+    fit_Times = fit_Times .- Start
+    fit_pmtmean = pmtmean[time_mask]
+    gerade(t, p) = p[1] .+ (p[2] .* t)
+    p0 = [fit_pmtmean[1], 0]
+    fit = curve_fit(gerade, fit_Times, fit_pmtmean, p0)
+    y = fit.param[1]- Start*fit.param[2]
     if return_function
-        return f(x)=Params[1]+Params[2]*x
+        return f(x)=y+fit.param[2]*x
     end
-    return Params
+    return (y,fit.param[2])
 end
 
 """
@@ -135,13 +142,18 @@ function inner_linfit_intervalls(pmtmean,Times, Dom_object::Tuple{Integer,Intege
     points_per_slice = Intervall/(slice_length/600)
     Events = linfitData[]
     for i in Timesteps
-        time_mask = ToolBox.maskTime(Times, (i-Intervall*30,i+Intervall*30))
+        time_mask = ToolBox.maskTime(Times, (i-Intervall*30,i+Intervall*30)) #*30 für die umrechnung in sek eigl *60*0.5
         rel_values = count(time_mask)/points_per_slice
-        #rausfinden , was hier bei linear_fit schief läuft
-        params = linear_fit(Times[time_mask], pmtmean[time_mask])
         if count(time_mask) > 0
-            y_provisorisch = pmtmean[time_mask][1]-params[2]*Times[time_mask][1]
-            push!(Events, linfitData(Typ, Dom_object[1], Dom_object[2], i, Intervall, (y_provisorisch,params[2]),rel_values))
+            Start = minimum(Times[time_mask])
+            fit_Times = Times[time_mask]
+            fit_Times = fit_Times .- Start
+            fit_pmtmean = pmtmean[time_mask]
+            gerade(t, p) = p[1] .+ (p[2] .* t)
+            p0 = [fit_pmtmean[1], 0]
+            fit = curve_fit(gerade, fit_Times, fit_pmtmean, p0)
+            y = fit.param[1]- Start*fit.param[2]
+            push!(Events, linfitData(Typ, Dom_object[1], Dom_object[2], i, Intervall, (y,fit.param[2]),rel_values))
         end
     end
     return Events
@@ -154,7 +166,9 @@ function Search_linFit_test2(detector; range=(1,40), threshold=0.15, loadpath=".
     Dom_Ids = optical_DomIds(detector)
     Events = linfitData[]
     for Dom in Dom_Ids[range[1]:range[2]]
-        append!(Events, inner_Search_linFit_test2(Dom, threshold=threshold, loadpath=loadpath, Typ="S_lf_t2"))
+        if isfile(string(loadpath, "/Data_", Dom,".h5"))
+            append!(Events, inner_Search_linFit_test2(Dom, threshold=threshold, loadpath=loadpath, Typ="S_lf_t2"))
+        end
     end
     return Events
 end
@@ -173,17 +187,19 @@ end
 # vllt auch hier f_mean,f_min,f_max hinzufügen?
 function Search_linFit_test1(Dom_Id; threshold=0.15, loadpath="../Data/DomData_Doms", Intervall::Integer=300, step::Integer=100, values_threshold = 0.45, prefilter::Bool=true, T_intervall::Tuple{Integer,Integer}=(0,0))
     Event = linfitData[]
-    datafile = h5open(string(loadpath, "/Data_", Dom_Id,".h5"), "r")    
-    pmtmean = read(datafile["pmtmean"])
-    Times = read(datafile["Time"])
-    slice_length = 6000 #read(datafile["slice_length"])
-    close(datafile)
-    for pmt in (1:PMT_count)
-        tmp_Events = inner_linfit_intervalls(pmtmean[:,pmt],Times, (Dom_Id, pmt), slice_length=slice_length,T_intervall=T_intervall, Intervall=Intervall, step=step, Typ="lf_t1")
-        for i in (1:length(tmp_Events))
-            if tmp_Events[i].params[2] >= threshold || tmp_Events[i].params[2] <= -threshold
-                if tmp_Events[i].rel_values >= values_threshold || !prefilter
-                    push!(Event, tmp_Events[i])
+    if isfile(string(loadpath, "/Data_", Dom_Id,".h5"))
+        datafile = h5open(string(loadpath, "/Data_", Dom_Id,".h5"), "r")    
+        pmtmean = read(datafile["pmtmean"])
+        Times = read(datafile["Time"])
+        slice_length = 6000 #read(datafile["slice_length"])
+        close(datafile)
+        for pmt in (1:PMT_count)
+            tmp_Events = inner_linfit_intervalls(pmtmean[:,pmt],Times, (Dom_Id, pmt), slice_length=slice_length,T_intervall=T_intervall, Intervall=Intervall, step=step, Typ="lf_t1")
+            for i in (1:length(tmp_Events))
+                if tmp_Events[i].params[2] >= threshold || tmp_Events[i].params[2] <= -threshold
+                    if tmp_Events[i].rel_values >= values_threshold || !prefilter
+                        push!(Event, tmp_Events[i])
+                    end
                 end
             end
         end

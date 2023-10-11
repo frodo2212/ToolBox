@@ -6,14 +6,11 @@ using Statistics
 using Dates
 using DataFrames #brauch ich das überhaupt?
 using FileIO
-using CurveFit
+using LsqFit
 using Glob
 
-export Data, DomData, DomData_Floors
-export Search_DomData, linfit_DomData, linfit_DomData_intervalls, intensiveSearch_DomData
-export optical_DomIds, maskTime, PMT_Direction, pos_Strings, Floors
-export DateTime_autocorrect, T_intervall, T_intervall2
-export autoscale_time
+export Data, DomData, DomData_Floors, Search_DomData, linfit_DomData, linfit_DomData_intervalls, intensiveSearch_DomData
+export optical_DomIds, PMT_Direction, pos_Strings, Floors, DateTime_autocorrect, T_intervall, T_intervall2
 export Event, linfitData
 
 module config 
