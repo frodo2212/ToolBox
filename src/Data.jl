@@ -7,6 +7,7 @@ function Data(loadpath::String, Run::Integer, detector::KM3io.Detector, storagep
     sections = floor(Int32, len/slice_length)
     last_section_length = len%slice_length
     last_section = last_section_length >= (slice_length*slice_length_threshold)
+    max_section = sections+last_section
     Dom_ids = optical_DomIds(detector)
     mkpath(storagepath)
     file = h5open(string(storagepath,"/",Run,"_",Int32(slice_length/600),".h5"), "w")
@@ -20,15 +21,15 @@ function Data(loadpath::String, Run::Integer, detector::KM3io.Detector, storagep
         End = minimum([i*30, length(Dom_ids)])
         Doms = Dom_ids[Start:End]
         Dom_count = End-Start+1
-        good_values = zeros(Int32, sections+last_section, Dom_count)
-        hrvcount = zeros(Int32, Dom_count, PMT_count, sections+last_section)
-        fifocount = zeros(Int32, Dom_count, PMT_count, sections+last_section)
-        pmtmean = zeros(Float64, Dom_count, PMT_count, sections+last_section)
+        good_values = zeros(Int32, max_section, Dom_count)
+        hrvcount = zeros(Int32, Dom_count, PMT_count, max_section)
+        fifocount = zeros(Int32, Dom_count, PMT_count, max_section)
+        pmtmean = zeros(Float64, Dom_count, PMT_count, max_section)
         for i in (1:sections)
             pmtmean[:,:,i], hrvcount[:,:,i], fifocount[:,:,i], good_values[i,:] = inner_extract_Data(Doms, Slices, slice_length, i, Dom_count)
         end
         if last_section
-            pmtmean[:,:,i], hrvcount[:,:,i], fifocount[:,:,i], good_values[i,:] = inner_extract_Data(Doms, Slices, last_section_length, sections+1, Dom_count)
+            pmtmean[:,:,max_section], hrvcount[:,:,max_section], fifocount[:,:,max_section], good_values[max_section,:] = inner_extract_Data(Doms, Slices, last_section_length, max_section, Dom_count)
         end 
         store_Data(Doms, pmtmean, hrvcount, fifocount, good_values, slice_length, Run, storagepath)
     end    
@@ -88,7 +89,7 @@ end
 
 function Data(filename::String, detector::KM3io.Detector, storagepath::String; slice_length=6000, slice_length_threshold=0.7)
     Run = parse(Int32, filename[collect(findlast("000", filename))[3]+1:collect(findlast("000", filename))[3]+5])
-    loadpath = filename[1:collect(findfirst(string(Run), filename))[1]]
+    loadpath = filename[1:collect(findlast("KM3NeT_00000133", filename))[1]-2]
     Data(loadpath, Run, detector, storagepath, slice_length=slice_length, slice_length_threshold=slice_length_threshold)
 end
 
