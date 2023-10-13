@@ -86,7 +86,7 @@ function store_Data(Doms::Vector{Int32}, pmtmean::Array{Float64}, hrvcount::Arra
 end 
 
 
-function Data(filename::String, detector::KM3io.Detector, loadpath::String, storagepath::String; slice_length=6000, slice_length_threshold=0.7)
+function Data(filename::String, detector::KM3io.Detector, storagepath::String; slice_length=6000, slice_length_threshold=0.7)
     Run = parse(Int32, filename[collect(findlast("000", filename))[3]+1:collect(findlast("000", filename))[3]+5])
     loadpath = filename[1:collect(findfirst(string(Run), filename))[1]]
     Data(loadpath, Run, detector, storagepath, slice_length=slice_length, slice_length_threshold=slice_length_threshold)
