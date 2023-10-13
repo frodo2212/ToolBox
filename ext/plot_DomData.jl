@@ -1,4 +1,4 @@
-function ToolBox.plot_DomDataV3_Rings(DomID::Int; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
+function ToolBox.plot_DomData_Rings(DomID::Int; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/Dom_", Dom_object[1],"_",Int32(slice_length/600),".h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
@@ -25,7 +25,7 @@ function ToolBox.plot_DomDataV3_Rings(DomID::Int; T_intervall::Tuple{Integer,Int
 end
 
 
-function ToolBox.plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000, information::Bool=false)
+function ToolBox.plot_DomData_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000, information::Bool=false)
     #file = h5open(string(loadpath, "/Dom_", Dom_object[1],"_",Int32(slice_length/600),".h5"), "r")
     file = h5open(string(loadpath, "/Data_", Dom_object[1],".h5"), "r") #das ist alt. muss weg sobald die neuen Daten da sind
     figure = Figure()
@@ -46,7 +46,7 @@ function ToolBox.plot_DomDataV3_PMT(Dom_object::Tuple{Integer,Integer}; T_interv
 end
 
 
-function ToolBox.plot_DomDataV3_Floor(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
+function ToolBox.plot_DomData_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/DomDataV3_Floors.h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
@@ -74,7 +74,7 @@ end
 
 
 
-function ToolBox.plot_DataV3_Event_test1(event::Event; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false, time_added::Integer=100)
+function ToolBox.plot_DomData_Event_test1(event::Event; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false, time_added::Integer=100)
     file = h5open(string(loadpath, "/Data_", event.Dom_Id,".h5"), "r")
     pmtmean = read(file["pmtmean"])[:,event.pmt]
     Times = read(file["Time"])
@@ -108,14 +108,14 @@ function ToolBox.plot_DataV3_Event_test1(event::Event; loadpath::String="../Data
     return figure
 end
 
-function ToolBox.plot_Data_Event_test2(Events::Vector{Event}; loadpath::String="../Data/DomData_Doms", time_added::Integer=100)
+function ToolBox.plot_DomData_Event_test2(Events::Vector{Event}; loadpath::String="../Data/DomData_Doms", time_added::Integer=100)
     for Event in Events
-        ToolBox.plot_DataV3_Event_test1(Event, loadpath=loadpath, save_picture=true, time_added=time_added)
+        ToolBox.plot_DomData_Event_test1(Event, loadpath=loadpath, save_picture=true, time_added=time_added)
     end
 end
 
 #die hier sind für intervalle
-function ToolBox.plot_Data_linFit_test1(Event::linfitData; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false)
+function ToolBox.plot_DomData_linFit_test1(Event::linfitData; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false)
     file = h5open(string(loadpath, "/Data_", Event.Dom_Id,".h5"), "r")
     pmtmean = read(file["pmtmean"])[:,Event.pmt]
     Times = read(file["Time"])
@@ -136,16 +136,16 @@ function ToolBox.plot_Data_linFit_test1(Event::linfitData; loadpath::String="../
     return figure
 end
 
-function ToolBox.plot_Data_linFit_test2(Events::Vector{linfitData}; loadpath::String="../Data/DomData_Doms")
+function ToolBox.plot_DomData_linFit_test2(Events::Vector{linfitData}; loadpath::String="../Data/DomData_Doms")
     for Event in Events
-        ToolBox.plot_Data_linFit_test1(Event, loadpath=loadpath, save_picture=true)
+        ToolBox.plot_DomData_linFit_test1(Event, loadpath=loadpath, save_picture=true)
     end
 end
 
 
 #doe hier sind noch sehr experimentell,
 #primär, weil die Daten, die rein kommen noch nicht gut sind...
-function ToolBox.plot_Data_linFit_ganz(Event::linfitData; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false)
+function ToolBox.plot_DomData_linFit_ganz(Event::linfitData; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false)
     file = h5open(string(loadpath, "/Data_", Event.Dom_Id,".h5"), "r")
     pmtmean = read(file["pmtmean"])[:,Event.pmt]
     Times = read(file["Time"])
@@ -164,7 +164,7 @@ function ToolBox.plot_Data_linFit_ganz(Event::linfitData; loadpath::String="../D
     return figure
 end
 
-function ToolBox.plot_Data_linFit_array(Events::Vector{linfitData}; loadpath::String="../Data/DomData_Doms")
+function ToolBox.plot_DomData_linFit_array(Events::Vector{linfitData}; loadpath::String="../Data/DomData_Doms")
     for Event in Events
         plot_Data_linFit_ganz(Event, loadpath=loadpath, save_picture=true)
     end

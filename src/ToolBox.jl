@@ -14,8 +14,6 @@ export optical_DomIds, PMT_Direction, pos_Strings, Floors, DateTime_autocorrect,
 export Event, linfitData
 
 module config 
-    # export PMT_count
-    # PMT_count = 31
     #Arrays with random colors/markers, to better apply a specific color/marker to plots
     Color = [:orange, :green1, :purple4, :navy, :red, :navajowhite3, :blue, :darkred,:darkgreen, :cyan, :maroon, :dimgrey, :purple, :yellow]
     markers = [:circle, :utriangle, :rect, :diamond, :vline, :star5, :hexagon, :cross, :dtriangle, :star4, :xcross, :ltriangle, :pentagon, :star6, :star8, :hline, :rtriangle, 'a', 'B', '↑', '✈']

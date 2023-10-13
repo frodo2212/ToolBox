@@ -20,21 +20,26 @@ function Search_DomData(bound::Tuple{Integer, Integer}, threshold::Tuple{Integer
     return (interesting_Doms)
 end
 
-function intensiveSearch_DomData_test2(detector, bound::Tuple{Integer, Integer}; threshold::Integer=6, loadpath::String="../Data/DomData_Doms")
+"""
+does an intensive Search for all optical Doms of given Detector
+"""
+function intSearch_DomData(detector, bound::Tuple{Integer, Integer}; threshold::Integer=6, loadpath::String="../Data/DomData_Doms")
     Dom_ids = optical_DomIds(detector)
     globalEvents = Event[]
     for Dom in Dom_ids
-        Events = intensiveSearch_DomData_test1(Dom, bound, threshold=threshold, loadpath=loadpath)
+        Events = intSearch_DomData_Dom(Dom, bound, threshold=threshold, loadpath=loadpath)
         append!(globalEvents, Events)
     end
     return globalEvents
 end
 
-# Die erstellt Events 
-#  es müssen mind 'threshold' pmtmeans aufeinanderfolgend innerhalb der bounds sein 
+"""
+Scans a Dom for anomalies 
+    returns a Event for every time mind 'threshold' values are inside the 'bound'
+"""
 #TODO: erweiterungsvorschläge:
 #       Funktion die bounds lokal über mean erstellt
-function intensiveSearch_DomData_test1(DomId::Integer, bound::Tuple{Integer, Integer}; threshold::Integer=6, loadpath::String="../Data/DomData_Doms")
+function intSearch_DomData_Dom(DomId::Integer, bound::Tuple{Integer, Integer}; threshold::Integer=6, loadpath::String="../Data/DomData_Doms")
     datafile = h5open(string(loadpath, "/Data_", DomId, ".h5"), "r")
     pmtmeans = read(datafile["pmtmean"])
     timestamps = read(datafile["Time"])
@@ -54,6 +59,10 @@ function intensiveSearch_DomData_test1(DomId::Integer, bound::Tuple{Integer, Int
     return Events
 end
 
+"""
+primarily a inside function, not for external use
+Does the search for anomalies on a given Vector of pmtmeans
+"""
 function intSearch_PMT(pmtmeans::Vector{Float64}, bound::Tuple{Integer, Integer}, threshold::Integer)
     len = length(pmtmeans)
     Events = Tuple{UInt32,UInt32, UInt32}[]
@@ -91,11 +100,6 @@ function intSearch_PMT(pmtmeans::Vector{Float64}, bound::Tuple{Integer, Integer}
 end
 
 
-
-
-
-
-
 """
 does a linfit over a single PMT given (DomId,PMT)
 returns either the parameters or a finished function  -  return_function=false
@@ -106,22 +110,25 @@ function linfit_DomData(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{I
     pmtmean = read(datafile["pmtmean"])[:,Dom_object[2]]
     Times = read(datafile["Time"])
     time_mask = ToolBox.maskTime(Times, T_intervall)
-    Start = minimum(Times[time_mask])
-    fit_Times = Times[time_mask]
-    fit_Times = fit_Times .- Start
+    fit_Times = Times[time_mask] .- Times[time_mask][1]
     fit_pmtmean = pmtmean[time_mask]
-    gerade(t, p) = p[1] .+ (p[2] .* t)
-    p0 = [fit_pmtmean[1], 0]
-    fit = curve_fit(gerade, fit_Times, fit_pmtmean, p0)
-    y = fit.param[1]- Start*fit.param[2]
-    if return_function
-        return f(x)=y+fit.param[2]*x
+    nanmask = maskinfnan(fit_pmtmean) 
+    if count(nanmask) > 0
+        gerade(t, p) = p[1] .+ (p[2] .* t)
+        p0 = [fit_pmtmean[nanmask][1], 0]
+        fit = curve_fit(gerade, fit_Times[nanmask], fit_pmtmean[nanmask], p0)
+        y = fit.param[1]- fit_Times[nanmask][1]*fit.param[2]
+        if return_function
+            return f(x)=y+fit.param[2]*x
+        end
+        return (y,fit.param[2])
+    else
+        return (0,0)
     end
-    return (y,fit.param[2])
 end
 
 """
-Takes a Tuple (DomID,PMT) 
+Takes a Tuple (DomID,PMT) and does an intervall linear fit for the Data of this Tuple
 possible arguments: Intervall, step (both in minutes)
 """
 function linfit_DomData_intervalls(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), Intervall::Integer=120, step::Integer=60, loadpath::String="../Data/DomData_Doms")
@@ -133,6 +140,10 @@ function linfit_DomData_intervalls(Dom_object::Tuple{Integer,Integer}; T_interva
     return inner_linfit_intervalls(pmtmean,Times, Dom_object, slice_length=slice_length,T_intervall=T_intervall, Intervall=Intervall, step=step)
 end
 
+"""
+primarily an inside function not for external use
+takes Vectors for pmtmean and Time and does the intervall linear fit on those
+"""
 function inner_linfit_intervalls(pmtmean,Times, Dom_object::Tuple{Integer,Integer};slice_length=600,T_intervall::Tuple{Integer,Integer}=(0,0), Intervall::Integer=120, step::Integer=60, Typ::String="inner_lf")
     if T_intervall == (0,0)
         Timesteps = collect(range(minimum(Times)+Intervall*30,maximum(Times)-Intervall*30 ,step=step*60))
@@ -145,34 +156,45 @@ function inner_linfit_intervalls(pmtmean,Times, Dom_object::Tuple{Integer,Intege
         time_mask = ToolBox.maskTime(Times, (i-Intervall*30,i+Intervall*30)) #*30 für die umrechnung in sek eigl *60*0.5
         rel_values = count(time_mask)/points_per_slice
         if count(time_mask) > 0
-            Start = minimum(Times[time_mask])
-            fit_Times = Times[time_mask]
-            fit_Times = fit_Times .- Start
+            fit_Times = Times[time_mask] .- Times[time_mask][1]
             fit_pmtmean = pmtmean[time_mask]
-            gerade(t, p) = p[1] .+ (p[2] .* t)
-            p0 = [fit_pmtmean[1], 0]
-            fit = curve_fit(gerade, fit_Times, fit_pmtmean, p0)
-            y = fit.param[1]- Start*fit.param[2]
-            push!(Events, linfitData(Typ, Dom_object[1], Dom_object[2], i, Intervall, (y,fit.param[2]),rel_values))
+            nanmask = maskinfnan(fit_pmtmean) #ist das wichtig? scheint ja nichts zu helfen
+            if count(nanmask) > 0
+                gerade(t, p) = p[1] .+ (p[2] .* t)
+                #m0 = (fit_pmtmean[nanmask][length(fit_pmtmean[nanmask])]-fit_pmtmean[nanmask][1])/fit_Times[nanmask][length(fit_Times[nanmask])]
+                p0 = [fit_pmtmean[nanmask][1], 0]
+                fit = curve_fit(gerade, fit_Times[nanmask], fit_pmtmean[nanmask], p0)
+                y = fit.param[1]- fit_Times[nanmask][1]*fit.param[2]
+                push!(Events, linfitData(Typ, Dom_object[1], Dom_object[2], i, Intervall, (y,fit.param[2]),rel_values))
+            end
         end
     end
     return Events
 end
 
+"""
+does a fit for all opticalDoms of given Detector and all its pmts over the whole time intervall
+returns the Data in a Vector of linfitData structs
+"""
 #die funktionieren schon, sind auf den momentanen Daten aber viel zu langsam - daher nur ausschnitte machen
 #TODO: Rückgabeformat verbessern
 # vllt noch f_min,f_max hinzufügen - die stechen aber wahrscheinlich raus, eher f_min,f_max vom gefitteten, da sind die Störugen draußen
-function Search_linFit_test2(detector; range=(1,40), threshold=0.15, loadpath="../Data/DomData_Doms")
+function Search_linFitData(detector; range=(1,40), threshold=0.15, loadpath="../Data/DomData_Doms")
     Dom_Ids = optical_DomIds(detector)
     Events = linfitData[]
     for Dom in Dom_Ids[range[1]:range[2]]
         if isfile(string(loadpath, "/Data_", Dom,".h5"))
-            append!(Events, inner_Search_linFit_test2(Dom, threshold=threshold, loadpath=loadpath, Typ="S_lf_t2"))
+            append!(Events, inner_Search_linFitData(Dom, threshold=threshold, loadpath=loadpath, Typ="S_lf_t2"))
         end
     end
     return Events
 end
-function inner_Search_linFit_test2(Dom_Id; threshold=0.15, loadpath="../Data/DomData_Doms", Typ::String="inner_lf_t2")
+
+"""
+primarily an inside function not for external use
+takes a DomId and does a linear fit over the whole time intervall for all pmts
+"""
+function inner_Search_linFitData(Dom_Id; threshold=0.15, loadpath="../Data/DomData_Doms", Typ::String="inner_lf_t2")
     Event = linfitData[]
     for pmt in (1:PMT_count)
         params = linfit_DomData((Dom_Id,pmt),loadpath=loadpath)
@@ -183,9 +205,11 @@ function inner_Search_linFit_test2(Dom_Id; threshold=0.15, loadpath="../Data/Dom
     return Event
 end
 
-
+"""
+does a Intervall search of one Dom and checks for every Intervall the slope and gives back the values grater than the threshold
+"""
 # vllt auch hier f_mean,f_min,f_max hinzufügen?
-function Search_linFit_test1(Dom_Id; threshold=0.15, loadpath="../Data/DomData_Doms", Intervall::Integer=300, step::Integer=100, values_threshold = 0.45, prefilter::Bool=true, T_intervall::Tuple{Integer,Integer}=(0,0))
+function Search_linFitData_intervalls(Dom_Id; threshold=0.15, loadpath="../Data/DomData_Doms", Intervall::Integer=300, step::Integer=100, values_threshold = 0.45, prefilter::Bool=true, T_intervall::Tuple{Integer,Integer}=(0,0))
     Event = linfitData[]
     if isfile(string(loadpath, "/Data_", Dom_Id,".h5"))
         datafile = h5open(string(loadpath, "/Data_", Dom_Id,".h5"), "r")    

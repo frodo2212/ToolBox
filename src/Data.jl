@@ -1,4 +1,6 @@
-function extract_Data(Slices::KM3io.SummarysliceContainer, detector::KM3io.Detector; slice_length=6000, slice_length_threshold=0.7) 
+function Data(loadpath::String, Run::Integer, detector::KM3io.Detector, storagepath::String; slice_length=6000, slice_length_threshold=0.7) 
+    Datei = ROOTFile(string(loadpath,"/KM3NeT_00000133_000",Run,"_S.root"))
+    Slices = Datei.online.summaryslices
     Start = Slices[1].header.t.s
     len = Int64(length(Slices))
     End = Slices[len].header.t.s 
@@ -6,29 +8,35 @@ function extract_Data(Slices::KM3io.SummarysliceContainer, detector::KM3io.Detec
     last_section_length = len%slice_length
     last_section = last_section_length >= (slice_length*slice_length_threshold)
     Dom_ids = optical_DomIds(detector)
-    Dom_count = length(Dom_ids) 
-    array_pos = Dict(Dom_ids[i]=>(1:Dom_count)[i] for i in (1:Dom_count))
-    Data = Dict{Int32, Tuple{Vector{Int32},Matrix{Float64},Matrix{Int32},Matrix{Int32}}}(Id=>(zeros(Int32,sections+last_section),zeros(Float64,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section),zeros(Int32,PMT_count,sections+last_section)) for Id in Dom_ids)
-    for i in (1:sections)
-        inner_extract_Data(Slices, slice_length, array_pos, i, Dom_count, Dom_ids, Data)
-    end
-    if last_section
-        inner_extract_Data(Slices, last_section_length, array_pos, sections+1, Dom_count, Dom_ids, Data)
-    end 
-    return (Start, End, Data, (last_section, last_section_length, slice_length))
+    mkpath(storagepath)
+    file = h5open(string(storagepath,"/",Run,"_",Int32(slice_length/600),".h5"), "w")
+    create_group(file, "used_config")
+    write(file["used_config"], "last_section", last_section)
+    write(file["used_config"], "last_section_length", last_section_length)
+    write(file["used_config"], "slice_length", slice_length)
+    close(file)
+    for i in (1:ceil(Int32, length(Dom_ids)/30)) #was für schritte hier machen? - im moment 30er
+        Start = (i-1)*30+1
+        End = minimum([i*30, length(Dom_ids)])
+        Doms = Dom_ids[Start:End]
+        Dom_count = End-Start+1
+        good_values = zeros(Int32, sections+last_section, Dom_count)
+        hrvcount = zeros(Int32, Dom_count, PMT_count, sections+last_section)
+        fifocount = zeros(Int32, Dom_count, PMT_count, sections+last_section)
+        pmtmean = zeros(Float64, Dom_count, PMT_count, sections+last_section)
+        for i in (1:sections)
+            pmtmean[:,:,i], hrvcount[:,:,i], fifocount[:,:,i], good_values[i,:] = inner_extract_Data(Doms, Slices, slice_length, i, Dom_count)
+        end
+        if last_section
+            pmtmean[:,:,i], hrvcount[:,:,i], fifocount[:,:,i], good_values[i,:] = inner_extract_Data(Doms, Slices, last_section_length, sections+1, Dom_count)
+        end 
+        store_Data(Doms, pmtmean, hrvcount, fifocount, good_values, slice_length, Run, storagepath)
+    end    
+    return 0 
 end
 
-function inner_extract_Data(Slices::KM3io.SummarysliceContainer, slice_length::Integer, array_pos, i::Integer, Dom_count::Integer, Dom_ids, Data)
-    frequencies, inner_hrvcount, inner_fifocount, good_values = extract_loops(Slices, slice_length, array_pos, i, Dom_count)
-    for allDoms in Dom_ids
-        Data[allDoms][1][i] = good_values[array_pos[allDoms]]
-        Data[allDoms][2][:,i] = [mean(filterzero(frequencies[array_pos[allDoms],i,:])) for i in (1:PMT_count)]
-        Data[allDoms][3][:,i] = inner_hrvcount[array_pos[allDoms],:]
-        Data[allDoms][4][:,i] = inner_fifocount[array_pos[allDoms],:]
-    end
-end
 
-function extract_loops(Slices::KM3io.SummarysliceContainer, slice_length::Integer, array_pos, i::Integer, Dom_count::Integer)
+function inner_extract_Data(Doms::Vector{Int32}, Slices::KM3io.SummarysliceContainer, slice_length::Integer, i::Integer, Dom_count::Integer)
     inner_hrvcount = zeros(Int32, Dom_count, PMT_count)
     inner_fifocount = zeros(Int32, Dom_count, PMT_count)
     frequencies = zeros(Float64, Dom_count, PMT_count, slice_length)
@@ -36,64 +44,52 @@ function extract_loops(Slices::KM3io.SummarysliceContainer, slice_length::Intege
     for j in (1:slice_length)
         for id in (1:length(Slices[(i-1)*slice_length+j].frames))
             frame = Slices[(i-1)*slice_length+j].frames[id]
-            position = array_pos[frame.dom_id]
-            good_values[position] +=1
-            F = pmtrates(frame)
-            !wrstatus(frame) && continue                 
-            if hrvstatus(frame) || fifostatus(frame)
-                for pmt in (1:PMT_count)
-                    loc_hrv = hrvstatus(frame, pmt-1)
-                    loc_fifo = fifostatus(frame, pmt-1)
-                    if  loc_hrv ||  loc_fifo
-                        F[pmt] = 0
+            if frame.dom_id in Doms
+                position = findfirst(x->x==frame.dom_id,Doms)
+                good_values[position] += 1
+                F = pmtrates(frame)
+                !wrstatus(frame) && continue                 
+                if hrvstatus(frame) || fifostatus(frame)
+                    for pmt in (1:PMT_count)
+                        loc_hrv = hrvstatus(frame, pmt-1)
+                        loc_fifo = fifostatus(frame, pmt-1)
+                        if  loc_hrv ||  loc_fifo
+                            F[pmt] = 0
+                        end
+                        inner_hrvcount[position, pmt] += loc_hrv
+                        inner_fifocount[position, pmt] += loc_fifo
                     end
-                    inner_hrvcount[position, pmt] += loc_hrv
-                    inner_fifocount[position, pmt] += loc_fifo
                 end
+                frequencies[position,:,j] = F
             end
-            frequencies[position,:,j] = F
         end 
     end
-    return (frequencies, inner_hrvcount, inner_fifocount, good_values)
+    pmtmean = [mean(filterzero(frequencies[j,i,:])) for j in (1:Dom_count), i in (1:PMT_count)]
+    return pmtmean, inner_hrvcount, inner_fifocount, good_values
 end
 
-function store_Data(Data::Tuple{UInt32, UInt32, Dict{Int32, Tuple{Vector{Int32}, Matrix{Float64}, Matrix{Int32}, Matrix{Int32}}}, Tuple{Bool, Integer, Integer}}, Run::Int32, storagepath::String)
-    Dom_ids = collect(keys(Data[3]))
-    len = length(Data[3][Dom_ids[1]][1])
-    mkpath(storagepath)
-    file = h5open(string(storagepath,"/",Run,"_",Int32(Data[4][3]/600),".h5"), "w")
-    for Dom in Dom_ids
-        create_group(file, string(Dom))
-        dset = create_dataset(file[string(Dom)], "good_values", Int32, (len,))
-        dset2 = create_dataset(file[string(Dom)], "pmtmean", Float64, (PMT_count,len))
-        dset3 = create_dataset(file[string(Dom)], "hrvcount", Int32, (PMT_count,len))
-        dset4 = create_dataset(file[string(Dom)], "fifocount", Int32, (PMT_count,len))
-        write(dset, Data[3][Dom][1])
-        write(dset2, Data[3][Dom][2])
-        write(dset3, Data[3][Dom][3])
-        write(dset4, Data[3][Dom][4])
+function store_Data(Doms::Vector{Int32}, pmtmean::Array{Float64}, hrvcount::Array{Int32}, fifocount::Array{Int32}, good_values::Matrix{Int32}, slice_length::Integer, Run::Integer, storagepath::String)
+    len = size(good_values[:,1])[1]
+    file = h5open(string(storagepath,"/",Run,"_",Int32(slice_length/600),".h5"), "cw")
+    for i in (1:length(Doms))
+        create_group(file, string(Doms[i]))
+        dset = create_dataset(file[string(Doms[i])], "good_values", Int32, (len,))
+        dset2 = create_dataset(file[string(Doms[i])], "pmtmean", Float64, (PMT_count,len))
+        dset3 = create_dataset(file[string(Doms[i])], "hrvcount", Int32, (PMT_count,len))
+        dset4 = create_dataset(file[string(Doms[i])], "fifocount", Int32, (PMT_count,len))
+        write(dset, good_values[:,i])
+        write(dset2, pmtmean[i,:,:])
+        write(dset3, hrvcount[i,:,:])
+        write(dset4, fifocount[i,:,:])
     end
-    write(file, "start", Data[1])
-    write(file, "end", Data[2])
-    create_group(file, "used_config")
-    write(file["used_config"], "last_section", Data[4][1])
-    write(file["used_config"], "last_section_length", Data[4][2])
-    write(file["used_config"], "slice_length", Data[4][3])
     close(file)
 end 
 
 
-function Data(filename::String, detector::KM3io.Detector, storagepath::String; slice_length=6000)
-    Datei = ROOTFile(filename)
-    Data = extract_Data(Datei.online.summaryslices, detector, slice_length=slice_length)
-    Runnumber = parse(Int32, filename[collect(findlast("000", filename))[3]+1:collect(findlast("000", filename))[3]+5])
-    store_Data(Data, Runnumber, string(storagepath,"/Runs_sl",Int32(slice_length/600),"Min"))
-end
-
-function Data(Runnumber::Integer, detector::KM3io.Detector, loadpath::String, storagepath::String; slice_length=6000)
-    Datei = ROOTFile(string(loadpath,"/KMeNeT_00000133_000",Runnumber,"_S.root"))
-    Data = extract_Data(Datei.online.summaryslices, detector, slice_length=slice_length)
-    store_Data(Data, Runnumber, string(storagepath,"/Runs_sl",Int32(slice_length/600),"Min"))
+function Data(filename::String, detector::KM3io.Detector, loadpath::String, storagepath::String; slice_length=6000, slice_length_threshold=0.7)
+    Run = parse(Int32, filename[collect(findlast("000", filename))[3]+1:collect(findlast("000", filename))[3]+5])
+    loadpath = filename[1:collect(findfirst(string(Run), filename))[1]]
+    Data(loadpath, Run, detector, storagepath, slice_length=slice_length, slice_length_threshold=slice_length_threshold)
 end
 
 

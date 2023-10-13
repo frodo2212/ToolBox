@@ -145,8 +145,8 @@ end
 
 #TODO: find a better Name and maybe a better argument structure
 function T_intervall2(Start::Tuple{Integer,Integer,Integer}=(0,0,0), Intervall::Tuple{Integer,Integer,Integer}=(0,0,0))
-    start_DT = Date_autocorrect(Start)
-    end_DT = Date_autocorrect((Start[1]+Intervall[1],Start[2]+Intervall[2],Start[3]+Intervall[3])) 
+    start_DT = inner_DateTime_autocorrect(Start, Datetime=true)
+    end_DT = inner_DateTime_autocorrect((Start[1]+Intervall[1],Start[2]+Intervall[2],Start[3]+Intervall[3]), Datetime=true) 
     return (Int64(datetime2unix(start_DT)), Int64(datetime2unix(end_DT)))
 end
 
@@ -249,6 +249,17 @@ function masknan(Vektor::Vector{T}) where T <: Real
     for i in (1:length(Vektor))
         mask[i] = true
         if isnan(Vektor[i])
+            mask[i] = false
+        end
+    end
+    return mask
+end
+
+function maskinfnan(Vektor::Vector{T}) where T <: Real
+    mask = Vector{Bool}(undef, length(Vektor))
+    for i in (1:length(Vektor))
+        mask[i] = true
+        if isnan(Vektor[i]) || isinf(Vektor[i])
             mask[i] = false
         end
     end
