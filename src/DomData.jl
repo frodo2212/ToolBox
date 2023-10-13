@@ -1,7 +1,7 @@
-function DomData(Dom_Id::Integer, loadpath::String, storagepath::String; files::Vector{String}=String[], slice_length::Integer=6000)
+function DomData(Dom_Id::Integer, storagepath::String; files::Vector{String}=String[], slice_length::Integer=6000, loadpath::String="../Data")
     loadpath = string(loadpath,"/Runs_sl",Int32(slice_length/600),"Min/")
     #possible_files = readdir(loadpath)
-    files1 = glob("*_S.root", loadpath) 
+    files1 = glob(string("*",Int32(slice_length/600),".h5"), loadpath) 
     possible_files = [file[findlast("/", file)[1]+1:length(file)] for file in files1]
     if files == String[]
         files = possible_files
@@ -45,7 +45,7 @@ function DomData(Dom_Id::Integer, loadpath::String, storagepath::String; files::
     write(d_good_values, good_values)
     write(storage, "slice_length", slice_length)
     close(storage)
-    return (wrong_sliceTime, notfound)
+    return (files, wrong_sliceTime, notfound)
 end
 
 

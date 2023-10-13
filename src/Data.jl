@@ -15,6 +15,8 @@ function Data(loadpath::String, Run::Integer, detector::KM3io.Detector, storagep
     write(file["used_config"], "last_section", last_section)
     write(file["used_config"], "last_section_length", last_section_length)
     write(file["used_config"], "slice_length", slice_length)
+    write(file, "start", Start)
+    write(file, "end", End)
     close(file)
     for i in (1:ceil(Int32, length(Dom_ids)/30)) #was für schritte hier machen? - im moment 30er
         Start = (i-1)*30+1
@@ -94,11 +96,11 @@ function Data(filename::String, detector::KM3io.Detector, storagepath::String; s
 end
 
 
-function inner_loadData(DomId::Int32, file::HDF5.File)
-    good_values = read(file[string(DomId)]["good_values"])
-    pmtmean = read(file[string(DomId)]["pmtmean"])
-    hrvcount = read(file[string(DomId)]["hrvcount"])
-    fifocount = read(file[string(DomId)]["fifocount"])
+function inner_loadData(DomId::String, file::HDF5.File)
+    good_values = read(file[DomId]["good_values"])
+    pmtmean = read(file[DomId]["pmtmean"])
+    hrvcount = read(file[DomId]["hrvcount"])
+    fifocount = read(file[DomId]["fifocount"])
     return (good_values, pmtmean, hrvcount, fifocount)
 end 
 
@@ -110,7 +112,7 @@ function load_Data_run(FileName::String, loadpath::String)
     DataDict = Dict(Id=>(zeros(Int32,sections),zeros(Float64,PMT_count,sections),zeros(Int32,PMT_count,sections),zeros(Int32,PMT_count,sections)) for Id in parse.(Int32, Keys_Dom_id))
     for key in Keys_Dom_id
         DomId = parse(Int32, key)
-        DataDict[DomId] = inner_loadData(DomId, file)
+        DataDict[DomId] = inner_loadData(string(DomId), file)
     end
     Start = Int64(read(file["start"]))
     End = Int64(read(file["end"]))
