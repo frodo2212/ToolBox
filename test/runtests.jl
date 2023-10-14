@@ -36,20 +36,16 @@ using DataFrames
     @test (DataFrame(dates=unix2datetime(1670764952) : Minute(18) : unix2datetime(1670769052)),"mm/dd/yyyyTHH:MM") == ToolBox.autoscale_time(1670764952,1670769052)
     Times = [1670764555,1670764850,1670764955,1670769050,1670769155,1670769350]
     @test [false,false,true,true,false,false] == ToolBox.maskTime(Times, (1670764952,1670769052))
-    pos_x = [-165.18, 116.649999999997, 52.2500000000189, -28.6999999999756, -137.979999999992, 172.699999999992, 145.250000000015, 78.6200000000312, 
-    -26.9000252796036, 183.720000000037, 120.159974720396, 36.3799747203964, -59.1700252796036, 299.849974720396, 218.879974720396, 186.139974720396, 
-    99.2199747203964, 10.4699747203964, -97.4600252796036, 238.099974720396, -40.85]
-    pos_y = [91.84, 106.750000000014, 180.299999999922, 204.199999999923, 197.70999999999, 130.75000000002, 199.550000000011, 267.449999999995, 
-    290.999966215319, 301.830000000031, 336.069966215319, 368.159966215319, 407.889966215319, 286.129966215319, 374.139966215319, 411.859966215319, 
-    452.459966215319, 477.269966215319, 476.389966215319, 461.619966215319, 555.89]
-    @test (pos_x, pos_y) == pos_Strings(det)
+    String_dict = pos_Strings(det)
+    @test String_dict[5] == (-165.18, 91.84)
+    @test length(keys(String_dict)) == 21
     @test (1702166400, 1704412800) == ToolBox.T_intervall((2023,11,40),(2023,13,5))
     @test (1702166400, 1714608000) == ToolBox.T_intervall2((2023,11,40),(0,3,52))
 end
 
 @testset "Data.jl" begin
-    det = Detector(datapath("detx", "km3net_offline.detx"))
-    f = ROOTFile(datapath("online", "km3net_online.root"))  #da brauch ich was anderes, 3 summaryslices reichen nicht
+    # det = Detector(datapath("detx", "km3net_offline.detx"))
+    # f = ROOTFile(datapath("online", "km3net_online.root"))  #da brauch ich was anderes, 3 summaryslices reichen nicht
     @test 1 == 1
     #solution = ()
     #@test solution == extract_Data(f.online.summaryslices, det, slice_length=500)

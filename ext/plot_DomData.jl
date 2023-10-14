@@ -24,10 +24,8 @@ function ToolBox.plot_DomData_Rings(DomID::Int; T_intervall::Tuple{Integer,Integ
     return figure
 end
 
-
 function ToolBox.plot_DomData_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000, information::Bool=false)
-    #file = h5open(string(loadpath, "/Dom_", Dom_object[1],"_",Int32(slice_length/600),".h5"), "r")
-    file = h5open(string(loadpath, "/Data_", Dom_object[1],".h5"), "r") #das ist alt. muss weg sobald die neuen Daten da sind
+    file = h5open(string(loadpath, "/Dom_", Dom_object[1],"_",Int32(slice_length/600),".h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies", xlabel="Time", ylabel="frequency in Hz") 
     Label(figure[0, 1], string("Data of Dom ", Dom_object[1], " PMT ", Dom_object[2]), fontsize = 30, tellwidth = false)
@@ -44,7 +42,6 @@ function ToolBox.plot_DomData_PMT(Dom_object::Tuple{Integer,Integer}; T_interval
     close(file)
     return figure
 end
-
 
 function ToolBox.plot_DomData_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/DomDataV3_Floors.h5"), "r")
@@ -72,10 +69,8 @@ function ToolBox.plot_DomData_Floors(Floor::Int64; T_intervall::Tuple{Integer,In
     return figure
 end
 
-
-
-function ToolBox.plot_DomData_Event_test1(event::Event; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false, time_added::Integer=100)
-    file = h5open(string(loadpath, "/Data_", event.Dom_Id,".h5"), "r")
+function ToolBox.plot_DomData_Event(event::Event; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false, time_added::Integer=100)
+    file = h5open(string(loadpath, "/Dom_", event.Dom_Id,"_",Int32(event.slice_length/600),".h5"), "r")
     pmtmean = read(file["pmtmean"])[:,event.pmt]
     Times = read(file["Time"])
     figure = Figure()
@@ -108,64 +103,123 @@ function ToolBox.plot_DomData_Event_test1(event::Event; loadpath::String="../Dat
     return figure
 end
 
-function ToolBox.plot_DomData_Event_test2(Events::Vector{Event}; loadpath::String="../Data/DomData_Doms", time_added::Integer=100)
+function ToolBox.plot_DomData_Event_array(Events::Vector{Event}; loadpath::String="../Data/DomData_Doms", time_added::Integer=100)
     for Event in Events
-        ToolBox.plot_DomData_Event_test1(Event, loadpath=loadpath, save_picture=true, time_added=time_added)
+        ToolBox.plot_DomData_Event(Event, loadpath=loadpath, save_picture=true, time_added=time_added)
     end
 end
 
-#die hier sind für intervalle
-function ToolBox.plot_DomData_linFit_test1(Event::linfitData; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false)
-    file = h5open(string(loadpath, "/Data_", Event.Dom_Id,".h5"), "r")
-    pmtmean = read(file["pmtmean"])[:,Event.pmt]
-    Times = read(file["Time"])
-    event_intervall = ToolBox.maskTime(Times, (Event.time-30*Event.time_intervall, Event.time+30*Event.time_intervall))
-    close(file)
-    figure = Figure()
-    axf1 = Axis(figure[1,1], title="frequencies of PMT", xlabel="Time", ylabel="frequency in Hz") 
-    axf2 = Axis(figure[2,1], title="frequencies of PMT", xlabel="Time", ylabel="frequency in Hz") 
-    scatter!(axf1, Times, pmtmean)
-    scatter!(axf1, Times[event_intervall], pmtmean[event_intervall])
-    scatter!(axf2, Times[event_intervall], pmtmean[event_intervall])
-    Label(figure[0,1], "bisher ist der y achsenAbschnitt falsch, da linear_fit nicht funktioniert...", fontsize = 20, tellwidth = false, justification=:center)   
-    #y_provisorisch = pmtmean[event_intervall][1]-Event.params[2]*Times[event_intervall][1]
-    scatter!(axf2, Times[event_intervall], [Event.params[1]+Event.params[2]*i for i in Times[event_intervall]], alpha=0.7)
-    if save_picture
-        save(string("temp_pictures/", Event.Dom_Id, "_", Event.pmt, "_", round(Event.params[2],digits=2), ".png"), figure)
-    end
-    return figure
-end
-
-function ToolBox.plot_DomData_linFit_test2(Events::Vector{linfitData}; loadpath::String="../Data/DomData_Doms")
-    for Event in Events
-        ToolBox.plot_DomData_linFit_test1(Event, loadpath=loadpath, save_picture=true)
-    end
-end
-
-
-#doe hier sind noch sehr experimentell,
-#primär, weil die Daten, die rein kommen noch nicht gut sind...
-function ToolBox.plot_DomData_linFit_ganz(Event::linfitData; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false)
-    file = h5open(string(loadpath, "/Data_", Event.Dom_Id,".h5"), "r")
-    pmtmean = read(file["pmtmean"])[:,Event.pmt]
+function ToolBox.plot_DomData_linFit(event::linfitData; loadpath::String="../Data/DomData_Doms", save_picture::Bool=false)
+    file = h5open(string(loadpath, "/Dom_", event.Dom_Id,"_",Int32(event.slice_length/600),".h5"), "r")
+    pmtmean = read(file["pmtmean"])[:,event.pmt]
     Times = read(file["Time"])
     close(file)
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies of PMT", xlabel="Time", ylabel="frequency in Hz") 
     axf2 = Axis(figure[2,1], title="frequencies of PMT", xlabel="Time", ylabel="frequency in Hz") 
     scatter!(axf1, Times, pmtmean)
-    Label(figure[0,1], "bisher ist der y achsenAbschnitt falsch, da linear_fit nicht funktioniert...", fontsize = 20, tellwidth = false, justification=:center)   
-    y_provisorisch = pmtmean[1]-Event.params[2]*Times[1]
-    scatter!(axf2, Times, [y_provisorisch+Event.params[2]*i for i in Times], alpha=0.7)
-    #scatter!(axf2, Times, [Event.params[1]+Event.params[2]*i for i in Times], alpha=0.7)
+    scatter!(axf2, Times, pmtmean)
+    scatter!(axf2, Times, [event.params[1]+event.params[2]*i for i in Times], alpha=0.7, marker=:hline)
     if save_picture
-        save(string("temp_pictures/lF_", Event.Dom_Id, "_", Event.pmt, ".png"), figure)
+        save(string("temp_pictures/lF_", event.Dom_Id, "_", event.pmt, ".png"), figure)
     end
     return figure
 end
 
 function ToolBox.plot_DomData_linFit_array(Events::Vector{linfitData}; loadpath::String="../Data/DomData_Doms")
     for Event in Events
-        plot_Data_linFit_ganz(Event, loadpath=loadpath, save_picture=true)
+        plot_Data_linFit(Event, loadpath=loadpath, save_picture=true)
     end
+end
+
+function ToolBox.plot_Strings(String_positions::Dict{Int64, Tuple{Float64, Float64}}; Strings::Vector{Int64}=Int64[])
+    if Strings == Int32[]
+        Strings = collect(keys(String_positions))
+    else
+        Strings = [st for st in Strings if st in collect(keys(String_positions))]
+    end
+    fig = Figure()
+    ax = Axis(fig[1,1], title = "position of the Strings inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m")
+    elements = []
+    for stringi in Strings
+        push!(elements,scatter!(ax, String_positions[stringi][1], String_positions[stringi][2]))
+        text!(ax, String_positions[stringi], text = string(stringi), offset = (4, 0)) #, align = (:left, :top))
+    end
+    return fig
+end
+
+function ToolBox.plot_Doms(Dom_Ids::Vector{Int32}, detector::Detector; labels::Bool=true)
+    positions = ToolBox.pos_Doms(Dom_Ids, detector)
+    fig = Figure()
+    ax3d = Axis3(fig[1,1], title = "position of the Doms inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m", zlabel = "z-Position in m")
+    for Dom in Dom_Ids
+        scatter!(ax3d, Point3f(positions[Dom]))
+        labels && text!(ax3d, Point3f(positions[Dom]), text = string(Dom))
+    end
+    return fig
+end
+
+function ToolBox.plot_Doms(detector::Detector; labels::Bool=false)
+    return ToolBox.plot_Doms(ToolBox.optical_DomIds(detector), detector, labels=labels)
+end
+
+function ToolBox.plot_Doms(Dom_Ids::Vector{Int32}, values::Vector{Float64}, detector::Detector; labels::Bool=false, size_bounds::Tuple{Real,Real}=(5,25))
+    if length(Dom_Ids) == length(values)
+        positions = ToolBox.pos_Doms(Dom_Ids, detector)
+        values = values .* ((size_bounds[2]-size_bounds[1])/(maximum(values)-minimum(values)))
+        values = values .+ (size_bounds[1]-minimum(values))
+        fig = Figure()
+        ax3d = Axis3(fig[1,1], title = "position of the Doms inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m", zlabel = "z-Position in m")
+        for nr in (1:length(Dom_Ids))
+            scatter!(ax3d, Point3f(positions[Dom_Ids[nr]]), markersize=values[nr])
+            labels && text!(ax3d, Point3f(positions[Dom_Ids[nr]]), text = string(Dom_Ids[nr]))
+        end
+        return fig
+    else
+        error("wrong Vector lengths")
+    end
+end
+
+
+function ToolBox.plot_Doms_colored(Dom_Ids::Vector{Int32}, values::Vector{Float64}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, size_bounds::Tuple{Real,Real}=(5,25))
+    if length(Dom_Ids) == length(values)
+        positions = ToolBox.pos_Doms(Dom_Ids, detector)
+        fig = Figure()
+        ax3d = Axis3(fig[1,1], title = "position of the Doms inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m", zlabel = "z-Position in m")
+        sizes = values .* ((size_bounds[2]-size_bounds[1])/(maximum(values)-minimum(values)))
+        sizes = sizes .+ (size_bounds[1]-minimum(sizes))
+        for nr in (1:length(Dom_Ids))
+            if add_markersizes
+                scatter!(ax3d, Point3f(positions[Dom_Ids[nr]]) , color = values[nr], colormap = :thermal, colorrange = (minimum(values), maximum(values)), markersize=sizes[nr])
+            else
+                scatter!(ax3d, Point3f(positions[Dom_Ids[nr]]) , color = values[nr], colormap = :thermal, colorrange = (minimum(values), maximum(values))) 
+            end
+            labels && text!(ax3d, Point3f(positions[Dom_Ids[nr]]), text = string(Dom_Ids[nr]))
+        end
+        Colorbar(fig[1, 2], limits = (minimum(values), maximum(values)), colormap = :thermal, label=valuetyp)
+        return fig
+    else
+        error("wrong Vector lengths")
+    end
+end
+
+function ToolBox.plot_Doms_colored(DomData_dict::Dict{Int32, T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
+    Dom_Ids = collect(keys(DomData_dict))
+    positions = ToolBox.pos_Doms(Dom_Ids, detector)
+    fig = Figure()
+    ax3d = Axis3(fig[1,1], title = "position of the Doms inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m", zlabel = "z-Position in m")
+    values = [v for (k,v) in DomData_dict]
+    max = maximum(values)
+    min = minimum(values)
+    factor = (size_bounds[2]-size_bounds[1])/(maximum(values)-minimum(values))
+    for Dom in Dom_Ids
+        if add_markersizes
+            scatter!(ax3d, Point3f(positions[Dom]) , color = DomData_dict[Dom], colormap = :thermal, colorrange = (minimum(values), maximum(values)), markersize=DomData_dict[Dom]*factor+(size_bounds[1]-min*factor))
+        else
+            scatter!(ax3d, Point3f(positions[Dom]) , color = DomData_dict[Dom], colormap = :thermal, colorrange = (minimum(values), maximum(values))) 
+        end
+        labels && text!(ax3d, Point3f(positions[Dom]), text = string(Dom))
+    end
+    Colorbar(fig[1, 2], limits = (minimum(values), maximum(values)), colormap = :thermal, label=valuetyp)
+    return fig
 end

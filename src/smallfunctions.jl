@@ -60,26 +60,44 @@ function Floors(detector::Detector)
     return (floors, Doms_on_Floor, max_floor, floor_size)
 end
 
-function pos_Strings(detector::Detector; plotten::Bool=false)
-    Groundmodules = [detector.locations[j,0].id for j in detector.strings]
-    len = length(Groundmodules)
-    pos_x = [detector.modules[Groundmodules[i]].pos.x for i in (1:len)]
-    pos_y = [detector.modules[Groundmodules[i]].pos.y for i in (1:len)]
-    if plotten 
-        fig = Figure()
-        ax = Axis(fig[1,1], title="Position der Bodenmodule der Strings")
-        elements = Vector{Any}(undef, len)
-        label= Vector{String}(undef, len)
-        for i in (1:len)
-            elements[i] = scatter!(ax, pos_x[i], pos_y[i])
-            label[i] = string("String", i)
-            
-        end
-        Legend(fig[1,2], elements, label)
-        return fig, (pos_x, pos_y)
-    else 
-        return (pos_x, pos_y)
+function pos_Strings(detector::Detector)
+    floors, = Floors(detector)
+    String_positions = Dict(i=>(detector.modules[detector.locations[i,floors[1]].id].pos.x,detector.modules[detector.locations[i,floors[1]].id].pos.y) for i in detector.strings)
+    return String_positions
+end
+
+function pos_Dom(Dom_Id::Integer, detector::Detector)
+    return detector.modules[Dom_Id].pos.x, detector.modules[Dom_Id].pos.y, detector.modules[Dom_Id].pos.z
+end
+
+function pos_Doms(Dom_Ids::Vector{Int32}, detector::Detector)
+    positions = Dict{Int32, Tuple{Float64,Float64,Float64}}
+    for Dom in Dom_Ids
+        positions = merge!(positions, Dict(Dom=>pos_Dom(Dom, detector)))
     end
+    return positions
+end
+
+function pos_Doms(detector::Detector)
+    return pos_Doms(optical_DomIds(detector), detector)
+end    
+
+function close_Doms(Dom_Id::Integer, detector::Detector, range::Real)
+    Doms = optical_DomIds(detector)
+    deleteat!(Doms, findfirst(x->x==Dom_Id,Doms))
+    positions = ToolBox.pos_Doms(detector)
+    close_Doms = Int32[]
+    for Dom in Doms
+        distance(positions[Dom_Id], positions[Dom]) <= range && push!(close_Doms, Dom)
+    end
+    return close_Doms
+end
+
+function distance(PointA::Tuple{Float64,Float64,Float64}, PointB::Tuple{Float64,Float64,Float64})
+    x = PointA[1]-PointB[1]
+    y = PointA[2]-PointB[2]
+    z = PointA[3]-PointB[3]
+    return sqrt(x*x+y*y+z*z)
 end
 
 function optical_DomIds(detector::Detector)    
@@ -170,24 +188,8 @@ function maskTime(Times, T_intervall::Tuple{Real,Real})
     end
     return T_mask
 end
+  
 
-"""
-takes a Vector of Vectors and returns a 1d Vector with all the elements
-"""
-function vectorize(array::Vector{Vector{T}}) where T<:Real
-    len = length(array)
-    inner_length = Vector{Int32}(undef,len)
-    for i in (1:len)
-        inner_length[i] = length(array[i])
-    end
-    newvector = Vector{typeof(array[1][1])}(undef, sum(inner_length))
-    for i in (1:len)
-        for j in (1:inner_length[i])
-            newvector[sum(inner_length[1:i-1])+j] = array[i][j]
-        end
-    end
-    return newvector
-end    
 """
 takes a Vector and returns a mask with true for all elements, that aren't zero
 """
@@ -264,4 +266,78 @@ function maskinfnan(Vektor::Vector{T}) where T <: Real
         end
     end
     return mask
+end
+
+
+function save_Events(Events::Vector{Event}, Name::String; storagepath::String="./")
+    file = h5open(string(storagepath,"/",Name,".h5"), "w")
+    for i in (1:length(Events))
+        create_group(file, string(i))
+        write(file[string(i)], "Typ", Events[i].Typ)
+        write(file[string(i)], "Dom_Id", Events[i].Dom_Id)
+        write(file[string(i)], "pmt", Events[i].pmt)
+        write(file[string(i)], "array_start", Events[i].array_start)
+        write(file[string(i)], "array_end", Events[i].array_end)
+        write(file[string(i)], "array_length", Events[i].array_length)
+        write(file[string(i)], "time_start", Events[i].time_start)
+        write(file[string(i)], "time_end", Events[i].time_end)
+        write(file[string(i)], "time_length", Events[i].time_length)
+        write(file[string(i)], "missing_timestamps", Events[i].missing_timestamps)
+        write(file[string(i)], "slice_length", Events[i].slice_length)
+    end
+    close(file)
+end
+function load_Events(Name::String; loadpath::String="./")
+    Events = Event[]
+    file = h5open(string(loadpath,"/",Name,".h5"), "r")
+    for i in keys(file)
+        Typ = read(file[string(i)], "Typ")
+        Dom_Id = read(file[string(i)], "Dom_Id")
+        pmt = read(file[string(i)], "pmt")
+        array_start = read(file[string(i)], "array_start")
+        array_end =read(file[string(i)], "array_end")
+        array_length = read(file[string(i)], "array_length")
+        time_start = read(file[string(i)], "time_start")
+        time_end = read(file[string(i)], "time_end")
+        time_length = read(file[string(i)], "time_length")
+        missing_timestamps = read(file[string(i)], "missing_timestamps")
+        slice_length = read(file[string(i)], "slice_length")
+        push!(Events, Event(Typ, Dom_Id, pmt, array_start, array_end, array_length, time_start, time_end, time_length, missing_timestamps, slice_length))
+    end
+    close(file)
+    return Events
+end
+
+function save_linFitData(Events::Vector{linfitData}, Name::String; storagepath::String="./")
+    file = h5open(string(storagepath,"/",Name,".h5"), "w")
+    for i in (1:length(Events))
+        create_group(file, string(i))
+        write(file[string(i)], "Typ", Events[i].Typ)
+        write(file[string(i)], "Dom_Id", Events[i].Dom_Id)
+        write(file[string(i)], "pmt", Events[i].pmt)
+        write(file[string(i)], "time", Events[i].time)
+        write(file[string(i)], "time_intervall", Events[i].time_intervall)
+        write(file[string(i)], "params1", Events[i].params[1])
+        write(file[string(i)], "params2", Events[i].params[2])
+        write(file[string(i)], "rel_values", Events[i].rel_values)
+        write(file[string(i)], "slice_length", Events[i].slice_length)
+    end
+    close(file)
+end
+function load_linfitData(Name::String; loadpath::String="./")
+    Events = linfitData[]
+    file = h5open(string(loadpath,"/",Name,".h5"), "r")
+    for i in keys(file)
+        Typ = read(file[string(i)], "Typ")
+        Dom_Id = read(file[string(i)], "Dom_Id")
+        pmt = read(file[string(i)], "pmt")
+        time = read(file[string(i)], "time")
+        time_intervall = read(file[string(i)], "time_intervall")
+        params = (read(file[string(i)], "params1"),read(file[string(i)], "params2"))
+        rel_values = read(file[string(i)], "rel_values")
+        slice_length = read(file[string(i)], "slice_length")
+        push!(Events, linfitData(Typ, Dom_Id, pmt, time, time_intervall, params, rel_values, slice_length))
+    end
+    close(file)
+    return Events
 end

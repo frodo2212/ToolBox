@@ -1,42 +1,33 @@
 Funktionen
 
-Data                ALLES NOCHMAL TESTEN      
-    extract_DomData                 getestet 28.09.
-    inner_extract_DomData           getestet 28.09.
-    extract_loops                   getestet 28.09.
-    store_DomData                   getestet
-    DomData                         getestet
-    DomData_folder                  getestet - alt        
-    inner_loadDomData               getestet        
-    load_DomData_run                getestet
-
-DomData
-    DomDataV3                       getestet 13.09.
-    allDomDataV3                    getestet 14.09. - alt
-    DomDataV3_Floors                getestet 14.09.
+Data           
+    inner_extract_DomData           getestet 13.10.
+    store_DomData                   getestet 13.10.
+    Data                            getestet 13.10.
+    inner_loadDomData               getestet 10.10. 
+    load_DomData_run                getestet 10.10.
+    DomData                         getestet 13.09.
+    DomData_Floors                  getestet 14.09.
 
 DomData_search
-    Search_DomDataV3                getestet 14.09.
-    intensiveSearch_DomData_test2
-    intensiveSearch_DomData_test1
+    Search_DomData                  getestet 14.09.
+    intSearch_DomData
+    intSearch_DomData_Dom
     intSearch_PMT
-    linfit_DomData                      - vllt in DomData lassen?
-    linfit_DomData_intervalls           - vllt in DomData lassen?
+    linfit_DomData      
+    linfit_DomData_intervalls
     inner_linfit_intervalls
-    Search_linFit_test2
-    inner_Search_linFit_test2
-    Search_linFit_test1
-
-    das ist in die Extension ausgelagert
-plot_DomData
-    plot_DomDataV3_PMT              getestet 29.09.
-    plot_DomDataV3_Floors           getestet 14.09.
-    plot_DomDataV3_Rings            getestet 14.09.
-    plot_DataV3_Events              getestet 16.09.
-    plot_DataV3_Event               getestet 16.09.
+    Search_linFitData
+    inner_Search_linFitData
+    Search_linFitData_intervalls
+    DomData_Dom_mean
     
 smallfunctions
     pos_Strings                     getestet 14.09.
+    pos_Dom                         getestet 14.10.
+    pos_Doms                        getestet 14.10.
+    close_Doms                      getestet 14.10.
+    distance                        getestet 14.10.
     optical_DomIds                  getestet 14.09.
     PMT_Direction                   getestet 13.09.
     autoscale_time                  getestet 12.09.
@@ -45,39 +36,31 @@ smallfunctions
     T_intervall2                    getestet 25.09.
     Date_autocorrect                getestet 25.09.
     DateTime_autocorrect            getestet 25.09.
-    vectorize                       getestet 14.09.
     maskzero                        getestet 14.09.
     filterzero                      getestet 14.09.
     filterzero                      getestet 14.09.
     filternan                       getestet 13.09.
     maskTime                        getestet 15.09.
+    maskinfnan                      getestet 13.10.
+    save_events                     getestet 13.10.
+    load_events                     getestet 13.10.
+    save_linfitData                 getestet 14.10.
+    load_linfitData                 getestet 14.10.
 
 
 
-Aussortierte Skripte
+das ist in die Extension ausgelagert
+PlottingExt
+    plot_DomDataV3_PMT              getestet 29.09.
+    plot_DomDataV3_Floors           getestet 14.09.
+    plot_DomDataV3_Rings            getestet 14.09.
+    plot_DomData_Event_array        
+    plot_DomData_Event            
+    plot_DomData_linFit_ganz
+    plot_DomData_linFit_array
+    plot_Strings                    getestet 14.10.
+    plot_Doms                       getestet 14.10.
+    plot_Doms_colored               getestet 14.10.
 
-Data                            
-    extract_Data                    getestet
-    store_Data                      getestet
-    load_Data_run                   getestet
-    Data                            getestet
-    Data_folder                     getestet
-    compress_Data                   getestet
-    load_Data                       getestet
-    plot_File                       getestet
-
-DomDataV1
-    mean_DomDataV1                  getestet
-    meanDomDataV1_sortFloors        getestet
-    plotPMTDataV1_Rings         testen
-    plotDomDataV1_Rings         testen
-    plotDomDataV1               testen
-    compress_DomDataV1              getestet
-
-DomDataV2
-    meanDomDataV2               testen  
-    meanDomDataV2_sortFloors    testen  
-    plot_DomDataV2_Rings            getestet 
-    Search_DomDataV2                getestet 
-    plot_DomDataV2_Floors_Rings testen
-    compress_DomDataV2              getestet
+PlottingExt3D
+    plot_Doms_3D                    getestet 14.10.
