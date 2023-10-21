@@ -9,8 +9,9 @@ using FileIO
 using LsqFit
 using Glob
 
-export Data, DomData, DomData_Floors, Search_DomData, linfit_DomData, linfit_DomData_intervalls, intensiveSearch_DomData
-export optical_DomIds, PMT_Direction, pos_Strings, Floors, DateTime_autocorrect, T_intervall, T_intervall2
+export Data, DomData, DomData_Floors
+export Search_DomData, intSearch_DomData, linfit_DomData, linfit_DomData_intervalls, Search_linFitData, Search_linFitData_intervalls, DomData_Dom_mean, DomData_PMT_mean
+export optical_DomIds, DateTime_autocorrect, T_intervall, T_intervall2, save_Events, load_Events, save_linfitData, load_linfitData
 export Event, linfitData
 
 module config 
@@ -47,10 +48,28 @@ struct linfitData
     slice_length::Int32
 end
 
+plot_DomData_Floors() = error("Extension not loaded")
+plot_DomData_PMT() = error("Extension not loaded")
+plot_DomData_Rings() = error("Extension not loaded")
+plot_DomData_linFit_array() = error("Extension not loaded")
+plot_DomData_linFit() = error("Extension not loaded")
+plot_DomData_Event_array() = error("Extension not loaded")
+plot_DomData_Event() = error("Extension not loaded")
+plot_Strings() = error("Extension not loaded")
+plot_DomData_PMT_rel() = error("Extension not loaded")
+plot_Doms() = error("Extension not loaded")
+plot_Doms_colored() = error("Extension not loaded")
+plot_Doms_3D() = error("Extension not loaded")
+plot_allDoms_3D() = error("Extension not loaded")
+plot_DomData_3D() = error("Extension not loaded")
+plot_closeDoms_3D() = error("Extension not loaded")
+plot_DomData_PMT_interactive() = error("Extension not loaded")
+plot_DomData_Rings_interactive() = error("Extension not loaded")
+plot_closeDoms_3D_interactive() = error("Extension not loaded")
+
 include("smallfunctions.jl")
 include("Data.jl")
 include("DomData_search.jl")
-include("emptyplotfunctions.jl")
 
 
 end 

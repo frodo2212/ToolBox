@@ -18,25 +18,24 @@ using DataFrames
     @test [1,3,5,8,6] == ToolBox.filterzero(test_array)
     test_array = [[1,5,2,9,0],[12,0,0,0,3,9],[1,2,3,4]]
     @test [[1,5,2,9],[12,3,9],[1,2,3,4]] == ToolBox.filterzero(test_array)
-    @test [1,5,2,9,0,12,0,0,0,3,9,1,2,3,4] == ToolBox.vectorize(test_array)
 
     det = Detector("testData/TestData14422.detx")
     det2 = Detector(datapath("detx", "km3net_offline.detx"))
     Test_Dom = 809503416
     @test DateTime(2023,3,4,2,11) == DateTime_autocorrect(2022,14,31,25,71)
     @test (2023,3,4,2,11) == DateTime_autocorrect((2022,14,31),Time=(25,71),Datetime=false)
-    @test ((0.142, -0.945, 0.295),5)== PMT_Direction(det2, 12, Test_Dom) #hier noch nen test mit det schreiben?
+    @test ((0.142, -0.945, 0.295),5) == ToolBox.PMT_Direction(det2, 12, Test_Dom) #hier noch nen test mit det schreiben?
     @test 378 == length(optical_DomIds(det))
     @test 90 == length(optical_DomIds(det2))
     @test 808972605 in optical_DomIds(det)
-    floors, dict, max_floor, floor_size = Floors(det2)
+    floors, dict, max_floor, floor_size = ToolBox.Floors(det2)
     @test (18, 5) == (max_floor, floor_size)
     @test [1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18] == floors 
     @test dict[5] == Int32[808945480, 808979567, 806483369, 808959411, 808489117]
     @test (DataFrame(dates=unix2datetime(1670764952) : Minute(18) : unix2datetime(1670769052)),"mm/dd/yyyyTHH:MM") == ToolBox.autoscale_time(1670764952,1670769052)
     Times = [1670764555,1670764850,1670764955,1670769050,1670769155,1670769350]
     @test [false,false,true,true,false,false] == ToolBox.maskTime(Times, (1670764952,1670769052))
-    String_dict = pos_Strings(det)
+    String_dict = ToolBox.pos_Strings(det)
     @test String_dict[5] == (-165.18, 91.84)
     @test length(keys(String_dict)) == 21
     @test (1702166400, 1704412800) == ToolBox.T_intervall((2023,11,40),(2023,13,5))

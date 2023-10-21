@@ -7,117 +7,89 @@ module PlottingExt3D
     using DataFrames 
     using FileIO
     using GLMakie
-
+    include("interactivePlots.jl")
     # brauche ich das??
     # GLMakie.activate!()
-
-    function ToolBox.plot_Doms_3D(detector::Detector)
-        ToolBox.plot_Doms_3D(ToolBox.optical_DomIds(detector), detector)
+    """
+    plots the 3D konfiguration of a Detector
+    """
+    function ToolBox.plot_allDoms_3D(detector::Detector; stringnumbers::Bool=false)
+        ToolBox.plot_Doms_3D(ToolBox.optical_DomIds(detector), detector, stringnumbers=stringnumbers)
     end
-    function ToolBox.plot_Doms_3D(Dom_Ids::Vector{Int32}, detector::Detector)
-        Dom_positions = ToolBox.pos_Doms(Dom_Ids, detector)
-        positions = [v for (k,v) in Dom_positions]
+    """
+    plots specific Doms of a Detector 
+    if plot_allDoms is activated, it shows the whole detector and highlights given Dom Ids
+    """
+    function ToolBox.plot_Doms_3D(Dom_Ids::Vector{Int32}, detector::Detector; stringnumbers::Bool=false, plot_allDoms::Bool=false, main_Dom::Int32=Int32(0))
         aspect=(1, 1, 1)
         perspectiveness=0.5
         fig = Figure(; resolution=(1200, 400))
         ax1 = Axis3(fig[1, 1]; aspect, perspectiveness)
-        scatter!(ax1, positions; markersize=15) #meshscatter oder scatter ändern die Texture
+        Dom_positions = ToolBox.pos_Doms(detector)
+        if plot_allDoms
+            all_positions = [v for (k,v) in Dom_positions]
+            scatter!(ax1, all_positions; markersize=10)
+            main_Dom!=0 && (scatter!(Dom_positions[main_Dom]; markersize=18, color=:darkred))
+        end
+        positions = [Dom_positions[Dom] for Dom in Dom_Ids]
+        scatter!(ax1, positions; markersize=15, color=:darkgreen) #meshscatter oder scatter ändern die Texture
+        if stringnumbers
+            str_pos = ToolBox.pos_Strings(detector)
+            Strings = collect(keys(str_pos))
+            string_positions = [(str_pos[i][1],str_pos[i][2],0) for i in Strings]
+            scatter!(ax1, string_positions)
+            for i in (1:length(Strings))
+                text!(ax1, string_positions[i], text = string(Strings[i]), offset = (4, 0)) #, align = (:left, :top))
+            end
+        end
         fig
     end
-    function ToolBox.plot_Doms_3D(Dom_Ids::Vector{Int32},values::Vector{Float64}, detector::Detector, valuetyp::String="")
+    """
+    takes a DomId, range and detector the plots the whole detector, and marks all doms in the range of given reference Dom
+    """
+    function ToolBox.plot_closeDoms_3D(Dom_Id::Int32, range::Real, detector::Detector; stringnumbers::Bool=false, plot_allDoms::Bool=true)
+        close_Doms = ToolBox.close_Doms(Dom_Id, range, detector)
+        return ToolBox.plot_Doms_3D(close_Doms, detector, stringnumbers=stringnumbers, plot_allDoms=plot_allDoms, main_Dom=Dom_Id)
+    end
+    """
+    takes either a Dictionary of Doms => values, or two Vectors of Doms and values 
+    it then plots The Doms in a 3D Grid and can incorporate the values either via colors, or sizes (default: colored)
+    """
+    function ToolBox.plot_DomData_3D(Dom_Ids::Vector{Int32},values::Vector{Float64}, detector::Detector; valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25), stringnumbers::Bool=false)
         Dom_positions = ToolBox.pos_Doms(Dom_Ids, detector)
         positions = [v for (k,v) in Dom_positions]
         aspect=(1, 1, 1)
         perspectiveness=0.5
+        sizes = values .* ((size_bounds[2]-size_bounds[1])/(maximum(values)-minimum(values)))
+        sizes = sizes .+ (size_bounds[1]-minimum(sizes))
         fig = Figure(; resolution=(1200, 400))
         ax1 = Axis3(fig[1, 1]; aspect, perspectiveness, title="position of the Doms inside the Detector")
-        scatter!(ax1, positions; markersize=15, color = values, colormap = :thermal, colorrange = (minimum(values), maximum(values)))
-        Colorbar(fig[1, 2], limits = (minimum(values), maximum(values)), colormap = :thermal, label=valuetyp)
+        if add_markersizes && colored
+            scatter!(ax1, positions; markersize=sizes, color = values, colormap = :thermal, colorrange = (minimum(values), maximum(values)))
+        elseif colored
+            scatter!(ax1, positions; markersize=16, color = values, colormap = :thermal, colorrange = (minimum(values), maximum(values)))
+        elseif add_markersizes
+            scatter!(ax1, positions; markersize=sizes)
+        else
+            scatter!(ax1, positions; markersize=16)
+        end
+        colored && Colorbar(fig[1, 2], limits = (minimum(values), maximum(values)), colormap = :thermal, label=valuetyp)
+        if stringnumbers
+            str_pos = ToolBox.pos_Strings(detector)
+            Strings = collect(keys(str_pos))
+            string_positions = [(str_pos[i][1],str_pos[i][2],0) for i in Strings]
+            scatter!(ax1, string_positions)
+            for i in (1:length(Strings))
+                text!(ax1, string_positions[i], text = string(Strings[i]), offset = (4, 0)) #, align = (:left, :top))
+            end
+        end
         fig
     end
-end
+    function ToolBox.plot_DomData_3D(Dom_data::Dict{Int32,Float64}, detector::Detector; valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25), stringnumbers::Bool=false)
+        Dom_Ids = collect(keys(Dom_data))
+        values = [Dom_data[Dom] for Dom in Dom_Ids]
+        ToolBox.plot_DomData_3D(Dom_Ids,values, detector, valuetyp=valuetyp, add_markersizes=add_markersizes, colored=colored, size_bounds=size_bounds, stringnumbers=stringnumbers)
+    end
 
-function ToolBox.plot_DomData_Rings(DomID::Integer; loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000)
-    fig = Figure() # resolution = (3840, 2160))
-    ax1 = Axis(fig[1,1],title ="DomData Rings")
-    ringmenu = Menu(fig[1,2], options = [1, 2, 3, 4, 5, 6], fontsize = 30)
-    button = Button(fig, label = "refresh")
-    fig[1, 2] = vgrid!(
-        Label(fig, "Ring:", fontsize = 30, width = 150), ringmenu,
-        button, tellheight = false, width = 200)
-    file = h5open(string(loadpath, "/Dom_", DomID,"_",Int32(slice_length/600),".h5"), "r")
-    Times = read(file["Time"])
-    pmt_values = Vector{Matrix{Float64}}(undef, 6)
-    Zeiten, Typ = ToolBox.autoscale_time(minimum(Times), maximum(Int64, Times), intervalls=3)
-    ax1.xticks[] = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ)) 
-    for ring in (1:length(ToolBox.config.Detector_PMT_Ringe))
-        pmt_values[ring] = Matrix{Float64}(undef, length(ToolBox.config.Detector_PMT_Ringe[ring]), length(Times))
-        for pmt in (1:length(ToolBox.config.Detector_PMT_Ringe[ring]))
-            pmt_values[ring][pmt,:] = read(file["pmtmean"])[:,ToolBox.config.Detector_PMT_Ringe[ring][pmt]]
-        end 
-    end
-    close(file)
-    #provisional_slider
-    lsgrid = SliderGrid(fig[2,:],
-    (label = "start", range = minimum(Times):1:maximum(Times), startvalue = minimum(Times)),
-    (label = "end", range = minimum(Times):1:maximum(Times), startvalue = maximum(Times))
-    # formats = [x -> "$(round(x))"],
-    )
-    Start = lsgrid.sliders[1].value
-    End = lsgrid.sliders[2].value
-    time_mask = @lift ToolBox.maskTime(Times,($Start,$End))
-    obs = Observable(1)
-    for i in (1:length(ToolBox.config.Detector_PMT_Ringe[obs[]]))
-        scatter!(ax1, Times[time_mask[]], pmt_values[obs[]][i,time_mask[]], color=ToolBox.config.Color[i], alpha=alpha)
-    end
-    on(obs) do obs
-        empty!(ax1)
-        for i in (1:length(ToolBox.config.Detector_PMT_Ringe[obs]))
-            scatter!(ax1, Times[time_mask[]], pmt_values[obs][i,time_mask[]], color=ToolBox.config.Color[i], alpha=alpha)
-        end
-    end
-    on(button.clicks) do click
-        empty!(ax1)
-        for i in (1:length(ToolBox.config.Detector_PMT_Ringe[obs[]]))
-            scatter!(ax1, Times[time_mask[]], pmt_values[obs[]][i,time_mask[]], color=ToolBox.config.Color[i], alpha=alpha)
-        end
-    end
-    on(ringmenu.selection) do select
-        obs[] = select
-    end
-    return fig
-end
 
-function ToolBox.plot_DomData_PMT(DomID::Integer; loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000)
-    fig = Figure() # resolution = (3840, 2160))
-    ax1 = Axis(fig[1,1],title ="DomData PMTs")
-    fig[2, 1] = buttongrid = GridLayout(tellwidth = false)
-    buttonlabels = [string(i) for i in (1:ToolBox.PMT_count)]
-    buttons = buttongrid[1, 1:11] = [Button(fig, label = l) for l in buttonlabels[1:11]]
-    buttons2 = buttongrid[2, 1:11] = [Button(fig, label = l) for l in buttonlabels[12:22]]
-    buttons3 = buttongrid[3, 1:9] = [Button(fig, label = l) for l in buttonlabels[23:31]]
-    buttons = append!(buttons, buttons2)
-    buttons = append!(buttons, buttons3)
-    file = h5open(string(loadpath, "/Dom_", DomID,"_",Int32(slice_length/600),".h5"), "r")
-    Times = read(file["Time"])
-    pmt_values = Vector{Vector{Float64}}(undef, ToolBox.PMT_count)
-    Zeiten, Typ = ToolBox.autoscale_time(minimum(Times), maximum(Int64, Times), intervalls=3)
-    ax1.xticks[] = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ)) 
-    for pmt in (1:ToolBox.PMT_count)
-        pmt_values[pmt] = read(file["pmtmean"])[:,pmt]
-    end 
-    close(file)
-    button_mask = zeros(Bool, ToolBox.PMT_count)
-    for i in (1:ToolBox.PMT_count)
-        on(buttons[i].clicks) do click
-            button_mask[i] = !button_mask[i]
-            empty!(ax1)
-            for pmt in (1:ToolBox.PMT_count)
-                button_mask[pmt] && scatter!(ax1, Times, pmt_values[pmt], color=ToolBox.config.Color[pmt%14+1], alpha=alpha, label = string("PMT", pmt))
-            end
-            [delete!(leg) for leg in fig.content if leg isa Legend]
-            count(button_mask)>0 && Legend(fig[1,2], ax1, "active PMTs")#, framevisible = false)
-        end
-    end
-    return fig
-end
+end #End of module write nothing after that

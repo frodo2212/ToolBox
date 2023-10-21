@@ -43,6 +43,33 @@ function ToolBox.plot_DomData_PMT(Dom_object::Tuple{Integer,Integer}; T_interval
     return figure
 end
 
+function ToolBox.plot_DomData_PMT_rel(Dom_Id::Int32; PMTs::Vector{Int64}=Int64[], T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=0.4, slice_length::Integer=6000, information::Bool=false, activate_shift::Bool=true, mean_goal::Float64=5500.0)
+    if PMTs == Int64[]
+        PMTs = (1:ToolBox.PMT_count)
+    end
+    file = h5open(string(loadpath, "/Dom_", Dom_Id,"_",Int32(slice_length/600),".h5"), "r")
+    figure = Figure()
+    axf1 = Axis(figure[1,1], title="frequencies", xlabel="Time", ylabel="frequency in Hz") 
+    Label(figure[0, 1], string("Data of Dom ", Dom_Id), fontsize = 30, tellwidth = false)
+    Times = read(file["Time"])
+    time_mask = ToolBox.maskTime(Times,T_intervall)
+    pmtmean = read(file["pmtmean"])
+    activate_shift && (pmtmean = ToolBox.shift_pmtmeans(pmtmean, mean_goal=mean_goal))
+    hrv_count = read(file["hrvcount"])
+    Zeiten, Typ = ToolBox.autoscale_time(minimum(Times), maximum(Int64, Times), intervalls=3)
+    axf1.xticks = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ))
+    close(file)
+    for pmt in PMTs
+        scatter!(axf1, Times[time_mask], pmtmean[time_mask,pmt], alpha=alpha)
+        if information
+            axf2 = Axis(figure[2,1], title="hrvcount", xlabel="Time", ylabel="hrv count") 
+            scatter!(axf2, Times[time_mask], hrv_count[time_mask,pmt], alpha=alpha)
+            axf2.xticks = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ))
+        end
+    end
+    return figure
+end
+
 function ToolBox.plot_DomData_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
     file = h5open(string(loadpath, "/DomDataV3_Floors.h5"), "r")
     figure = Figure()
@@ -132,6 +159,10 @@ function ToolBox.plot_DomData_linFit_array(Events::Vector{linfitData}; loadpath:
     end
 end
 
+function ToolBox.plot_Strings(detector::Detector)
+    ToolBox.plot_Strings(ToolBox.pos_Strings(detector))
+end
+
 function ToolBox.plot_Strings(String_positions::Dict{Int64, Tuple{Float64, Float64}}; Strings::Vector{Int64}=Int64[])
     if Strings == Int32[]
         Strings = collect(keys(String_positions))
@@ -148,6 +179,7 @@ function ToolBox.plot_Strings(String_positions::Dict{Int64, Tuple{Float64, Float
     return fig
 end
 
+
 function ToolBox.plot_Doms(Dom_Ids::Vector{Int32}, detector::Detector; labels::Bool=true)
     positions = ToolBox.pos_Doms(Dom_Ids, detector)
     fig = Figure()
@@ -163,63 +195,32 @@ function ToolBox.plot_Doms(detector::Detector; labels::Bool=false)
     return ToolBox.plot_Doms(ToolBox.optical_DomIds(detector), detector, labels=labels)
 end
 
-function ToolBox.plot_Doms(Dom_Ids::Vector{Int32}, values::Vector{Float64}, detector::Detector; labels::Bool=false, size_bounds::Tuple{Real,Real}=(5,25))
-    if length(Dom_Ids) == length(values)
-        positions = ToolBox.pos_Doms(Dom_Ids, detector)
-        values = values .* ((size_bounds[2]-size_bounds[1])/(maximum(values)-minimum(values)))
-        values = values .+ (size_bounds[1]-minimum(values))
-        fig = Figure()
-        ax3d = Axis3(fig[1,1], title = "position of the Doms inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m", zlabel = "z-Position in m")
-        for nr in (1:length(Dom_Ids))
-            scatter!(ax3d, Point3f(positions[Dom_Ids[nr]]), markersize=values[nr])
-            labels && text!(ax3d, Point3f(positions[Dom_Ids[nr]]), text = string(Dom_Ids[nr]))
-        end
-        return fig
-    else
-        error("wrong Vector lengths")
-    end
-end
-
-
-function ToolBox.plot_Doms_colored(Dom_Ids::Vector{Int32}, values::Vector{Float64}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, size_bounds::Tuple{Real,Real}=(5,25))
+function ToolBox.plot_Doms(Dom_Ids::Vector{Int32}, values::Vector{T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
     if length(Dom_Ids) == length(values)
         positions = ToolBox.pos_Doms(Dom_Ids, detector)
         fig = Figure()
         ax3d = Axis3(fig[1,1], title = "position of the Doms inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m", zlabel = "z-Position in m")
         sizes = values .* ((size_bounds[2]-size_bounds[1])/(maximum(values)-minimum(values)))
         sizes = sizes .+ (size_bounds[1]-minimum(sizes))
-        for nr in (1:length(Dom_Ids))
-            if add_markersizes
-                scatter!(ax3d, Point3f(positions[Dom_Ids[nr]]) , color = values[nr], colormap = :thermal, colorrange = (minimum(values), maximum(values)), markersize=sizes[nr])
-            else
-                scatter!(ax3d, Point3f(positions[Dom_Ids[nr]]) , color = values[nr], colormap = :thermal, colorrange = (minimum(values), maximum(values))) 
-            end
-            labels && text!(ax3d, Point3f(positions[Dom_Ids[nr]]), text = string(Dom_Ids[nr]))
+        if add_markersizes && colored
+            scatter!(ax3d, Point3f(positions), color = values, colormap = :thermal, colorrange = (minimum(values), maximum(values)), markersize=sizes)
+        elseif colored
+            scatter!(ax3d, Point3f(positions), color = values, colormap = :thermal, colorrange = (minimum(values), maximum(values)))
+        elseif add_markersizes
+            scatter!(ax3d, Point3f(positions), markersize=sizes)
+        else  
+            scatter!(ax3d, Point3f(positions))
         end
-        Colorbar(fig[1, 2], limits = (minimum(values), maximum(values)), colormap = :thermal, label=valuetyp)
+        labels && text!(ax3d, Point3f(positions), text = string(Dom_Ids))
+        colored && Colorbar(fig[1, 2], limits = (minimum(values), maximum(values)), colormap = :thermal, label=valuetyp)
         return fig
     else
         error("wrong Vector lengths")
     end
 end
 
-function ToolBox.plot_Doms_colored(DomData_dict::Dict{Int32, T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
+function ToolBox.plot_Doms(DomData_dict::Dict{Int32, T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
     Dom_Ids = collect(keys(DomData_dict))
-    positions = ToolBox.pos_Doms(Dom_Ids, detector)
-    fig = Figure()
-    ax3d = Axis3(fig[1,1], title = "position of the Doms inside the Detector", xlabel = "x-Position in m", ylabel = "y-Position in m", zlabel = "z-Position in m")
-    values = [v for (k,v) in DomData_dict]
-    max = maximum(values)
-    min = minimum(values)
-    factor = (size_bounds[2]-size_bounds[1])/(maximum(values)-minimum(values))
-    for Dom in Dom_Ids
-        if add_markersizes
-            scatter!(ax3d, Point3f(positions[Dom]) , color = DomData_dict[Dom], colormap = :thermal, colorrange = (minimum(values), maximum(values)), markersize=DomData_dict[Dom]*factor+(size_bounds[1]-min*factor))
-        else
-            scatter!(ax3d, Point3f(positions[Dom]) , color = DomData_dict[Dom], colormap = :thermal, colorrange = (minimum(values), maximum(values))) 
-        end
-        labels && text!(ax3d, Point3f(positions[Dom]), text = string(Dom))
-    end
-    Colorbar(fig[1, 2], limits = (minimum(values), maximum(values)), colormap = :thermal, label=valuetyp)
-    return fig
+    values = [DomData_dict[Dom] for Dom in Dom_Ids]
+    ToolBox.plot_Doms_colored(Dom_Ids, values, detector, labels=labels, valuetyp=valuetyp, add_markersizes=add_markersizes, colored=colored, size_bounds=size_bounds)
 end
