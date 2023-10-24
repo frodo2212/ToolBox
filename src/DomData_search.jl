@@ -305,7 +305,7 @@ function store_linfitData_intervalls(detector::Detector; Doms=Int32[], T_interva
     close(file)
 end
 
-function load_linFitData_intervalls(Dom_Id::Int32; Name::String="lfData_Intervalls", storagepath::String=".", return_Dict::Bool=false, metadata::Bool=false, return_lfD::Bool=false)
+function load_linFitData_intervalls(Dom_Id::Int32; pmt::Integer=0, Name::String="lfData_Intervalls", storagepath::String=".", return_Dict::Bool=false, metadata::Bool=false, return_lfD::Bool=false, deletezeros::Bool=true)
     file = h5open(string(storagepath,"/",Name,".h5"), "r")
     possible_Doms = collect(keys(read(file)))
     deleteat!(possible_Doms, findall(x->x in ["Intervall","step","ignore_highs","slice_length"],possible_Doms))
@@ -318,24 +318,43 @@ function load_linFitData_intervalls(Dom_Id::Int32; Name::String="lfData_Interval
         Intervall = read(file, "Intervall")
         ignore_highs = read(file, "ignore_highs")
         close(file)
-        params = [(params1[i,j],params2[i,j]) for i in (1:PMT_count), j in (1:length(Timesteps))] 
-        return_Dict && metadata && return Dict(Timesteps[i]=>params[i] for i in (1:length(Timesteps))), (Intervall, step, ignore_highs,slice_length)
-        metadata && (return params, Timesteps, (Intervall, step, ignore_highs,slice_length))
-        return_Dict && return Dict(Timesteps[i]=>params[i] for i in (1:length(Timesteps)))
+        if pmt > 0 && pmt <=31
+            params = [(params1[pmt,j],params2[pmt,j]) for j in (1:length(Timesteps))] 
+            if deletezeros 
+            deleteat!(Timesteps, findall(x->x==(0,0),params))
+            deleteat!(params, findall(x->x==(0,0),params))
+            end
+        else 
+            params = [(params1[i,j],params2[i,j]) for i in (1:PMT_count), j in (1:length(Timesteps))]
+            if deletezeros
+                zeros = findall(x->x==0,params1[1,:])
+                deleteat!(Timesteps, zeros)
+                params = params[:, setdiff(1:end, zeros)]
+            end
+        end
+        if return_Dict
+            metadata && (return Dict(Timesteps[i]=>params[i] for i in (1:length(Timesteps))), (Intervall, step, ignore_highs,slice_length))
+            return Dict(Timesteps[i]=>params[i] for i in (1:length(Timesteps)))
+        end
         if return_lfD
             lfData = linfitData[]
-            for pmt in (1:PMT_count)
-                for i in (1:length(Timesteps))
-                    if (params1[pmt,i],params2[pmt,i]) != (0,0)
+            if pmt > 0 && pmt <=31 
+                for pmt in (1:PMT_count)
+                    for i in (1:length(Timesteps))
                         push!(lfData, linfitData("lf_int", Dom_Id, pmt, Timesteps[i], Intervall, (params1[pmt,i],params2[pmt,i]),0, slice_length))
                     end
                 end
+            else 
+                for i in (1:length(Timesteps))
+                    push!(lfData, linfitData("lf_int", Dom_Id, pmt, Timesteps[i], Intervall, (params1[pmt,i],params2[pmt,i]),0, slice_length))
+                end
             end
+            metadata && (return lfData, (Intervall, step, ignore_highs,slice_length))
             return lfData
         end
-        return params, Timesteps
+        metadata && (return Timesteps, params, (Intervall, step, ignore_highs,slice_length))
+        return Timesteps, params
     end
-    close(file)
     return 0
 end
 

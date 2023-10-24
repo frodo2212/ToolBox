@@ -55,7 +55,7 @@ module PlottingExt3D
     takes either a Dictionary of Doms => values, or two Vectors of Doms and values 
     it then plots The Doms in a 3D Grid and can incorporate the values either via colors, or sizes (default: colored)
     """
-    function ToolBox.plot_DomData_3D(Dom_Ids::Vector{Int32},values::Vector{Float64}, detector::Detector; valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25), stringnumbers::Bool=false)
+    function ToolBox.plot_DomData_3D(Dom_Ids::Vector{Int32},values::Vector{T}, detector::Detector; valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25), stringnumbers::Bool=false) where T <: Real
         Dom_positions = ToolBox.pos_Doms(Dom_Ids, detector)
         positions = [v for (k,v) in Dom_positions]
         aspect=(1, 1, 1)
@@ -85,7 +85,7 @@ module PlottingExt3D
         end
         fig
     end
-    function ToolBox.plot_DomData_3D(Dom_data::Dict{Int32,Float64}, detector::Detector; valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25), stringnumbers::Bool=false)
+    function ToolBox.plot_DomData_3D(Dom_data::Dict{Int32,T}, detector::Detector; valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25), stringnumbers::Bool=false) where T <: Real
         Dom_Ids = collect(keys(Dom_data))
         values = [Dom_data[Dom] for Dom in Dom_Ids]
         ToolBox.plot_DomData_3D(Dom_Ids,values, detector, valuetyp=valuetyp, add_markersizes=add_markersizes, colored=colored, size_bounds=size_bounds, stringnumbers=stringnumbers)

@@ -24,26 +24,7 @@ function ToolBox.plot_DomData_Rings(DomID::Int; T_intervall::Tuple{Integer,Integ
     return figure
 end
 
-function ToolBox.plot_DomData_PMT(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000, information::Bool=false)
-    file = h5open(string(loadpath, "/Dom_", Dom_object[1],"_",Int32(slice_length/600),".h5"), "r")
-    figure = Figure()
-    axf1 = Axis(figure[1,1], title="frequencies", xlabel="Time", ylabel="frequency in Hz") 
-    Label(figure[0, 1], string("Data of Dom ", Dom_object[1], " PMT ", Dom_object[2]), fontsize = 30, tellwidth = false)
-    Times = read(file["Time"])
-    time_mask = ToolBox.maskTime(Times,T_intervall)
-    scatter!(axf1, Times[time_mask], read(file["pmtmean"])[time_mask,Dom_object[2]], alpha=alpha)
-    Zeiten, Typ = ToolBox.autoscale_time(minimum(Times), maximum(Int64, Times), intervalls=3)
-    axf1.xticks = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ))
-    if information
-        axf2 = Axis(figure[2,1], title="hrvcount", xlabel="Time", ylabel="hrv count") 
-        scatter!(axf2, Times[time_mask], read(file["hrvcount"])[time_mask,Dom_object[2]], alpha=alpha)
-        axf2.xticks = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ))
-    end
-    close(file)
-    return figure
-end
-
-function ToolBox.plot_DomData_PMT_rel(Dom_Id::Int32; PMTs::Vector{Int64}=Int64[], T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", alpha::Float64=0.4, slice_length::Integer=6000, information::Bool=false, activate_shift::Bool=true, mean_goal::Float64=5500.0)
+function ToolBox.plot_DomData_PMT(Dom_Id::Int32; PMTs::Vector{Int64}=Int64[], T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", slice_length::Integer=6000, information::Bool=false, activate_shift::Bool=false, mean_goal::Float64=5500.0)
     if PMTs == Int64[]
         PMTs = (1:ToolBox.PMT_count)
     end
@@ -60,18 +41,18 @@ function ToolBox.plot_DomData_PMT_rel(Dom_Id::Int32; PMTs::Vector{Int64}=Int64[]
     axf1.xticks = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ))
     close(file)
     for pmt in PMTs
-        scatter!(axf1, Times[time_mask], pmtmean[time_mask,pmt], alpha=alpha)
+        scatter!(axf1, Times[time_mask], pmtmean[time_mask,pmt])
         if information
             axf2 = Axis(figure[2,1], title="hrvcount", xlabel="Time", ylabel="hrv count") 
-            scatter!(axf2, Times[time_mask], hrv_count[time_mask,pmt], alpha=alpha)
+            scatter!(axf2, Times[time_mask], hrv_count[time_mask,pmt])
             axf2.xticks = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ))
         end
     end
     return figure
 end
 
-function ToolBox.plot_DomData_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0)
-    file = h5open(string(loadpath, "/DomDataV3_Floors.h5"), "r")
+function ToolBox.plot_DomData_Floors(Floor::Int64; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", alpha::Float64=1.0, slice_length=6000)
+    file = h5open(string(loadpath, "/DomData_floors_",Int32(slice_length/600),".h5"), "r")
     figure = Figure()
     axf1 = Axis(figure[1,1], title="frequencies of PMT Ring A", xlabel="Time", ylabel="frequency in Hz") 
     axf2 = Axis(figure[2,1], title="frequencies of PMT Ring B", xlabel="Time", ylabel="frequency in Hz")
@@ -83,9 +64,9 @@ function ToolBox.plot_DomData_Floors(Floor::Int64; T_intervall::Tuple{Integer,In
     Label(figure[0, :], string("Data of Floor ", Floor), fontsize = 30)
     Times = read(file["Time"])
     time_mask = ToolBox.maskTime(Times,T_intervall)
-    for ring in (1:length(config.Detector_PMT_Ringe))
-        for pmt_number in (1:length(config.Detector_PMT_Ringe[ring]))
-            scatter!(Ax[ring], Times[time_mask], read(file["pmtmean"])[Floor,:,config.Detector_PMT_Ringe[ring][pmt_number]][time_mask], color=config.Color[pmt_number], alpha=alpha)
+    for ring in (1:length(ToolBox.config.Detector_PMT_Ringe))
+        for pmt_number in (1:length(ToolBox.config.Detector_PMT_Ringe[ring]))
+            scatter!(Ax[ring], Times[time_mask], read(file["pmtmean"])[Floor,:,ToolBox.config.Detector_PMT_Ringe[ring][pmt_number]][time_mask], color=ToolBox.config.Color[pmt_number], alpha=alpha)
         end 
     end
     Zeiten, Typ = ToolBox.autoscale_time(minimum(Times), maximum(Times), intervalls=3)
@@ -159,6 +140,32 @@ function ToolBox.plot_DomData_linFit_array(Events::Vector{linfitData}; loadpath:
     end
 end
 
+function ToolBox.plot_lf_Intervalls(Dom_Id::Int32; pmt=0, Name::String="lfData_Intervalls", storagepath::String=".", save_picture::Bool=false) #approx derivative with bad resolution
+    timesteps, params = ToolBox.load_linFitData_intervalls(Dom_Id, Name=Name, storagepath=storagepath)
+    figure = Figure()
+    axf1 = Axis(figure[1,1], title="slopes of PMT", xlabel="Time", ylabel="slope of the linear fit in Hz/h") 
+    if pmt isa Number && pmt != 0
+        slopes = [params[pmt,i][2] for i in (1:length(params))]*3600
+        scatter!(axf1, timesteps, slopes)
+    elseif pmt isa Number
+        for PMT in (1:ToolBox.PMT_count)
+            slopes = [params[PMT,i][2] for i in (1:size(params)[2])]*3600
+            scatter!(axf1, timesteps, slopes)
+        end
+    else 
+        for PMT in pmt
+            slopes = [params[PMT,i][2] for i in (1:size(params)[2])]*3600
+            scatter!(axf1, timesteps, slopes)
+        end
+    end
+    if save_picture
+        save(string("temp_pictures/lF_Int_", Dom_Id, ".", pmt, ".png"), figure)
+    end
+    Zeiten, Typ = ToolBox.autoscale_time(minimum(timesteps), maximum(timesteps))
+    axf1.xticks = (datetime2unix.(Zeiten.dates) , Dates.format.(Zeiten.dates, Typ))
+    return figure
+end
+
 function ToolBox.plot_Strings(detector::Detector)
     ToolBox.plot_Strings(ToolBox.pos_Strings(detector))
 end
@@ -195,7 +202,7 @@ function ToolBox.plot_Doms(detector::Detector; labels::Bool=false)
     return ToolBox.plot_Doms(ToolBox.optical_DomIds(detector), detector, labels=labels)
 end
 
-function ToolBox.plot_Doms(Dom_Ids::Vector{Int32}, values::Vector{T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
+function ToolBox.plot_DomData(Dom_Ids::Vector{Int32}, values::Vector{T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
     if length(Dom_Ids) == length(values)
         positions = ToolBox.pos_Doms(Dom_Ids, detector)
         fig = Figure()
@@ -219,7 +226,7 @@ function ToolBox.plot_Doms(Dom_Ids::Vector{Int32}, values::Vector{T}, detector::
     end
 end
 
-function ToolBox.plot_Doms(DomData_dict::Dict{Int32, T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
+function ToolBox.plot_DomData(DomData_dict::Dict{Int32, T}, detector::Detector; labels::Bool=false, valuetyp::String="", add_markersizes::Bool=false, colored::Bool=true, size_bounds::Tuple{Real,Real}=(5,25)) where T <: Real
     Dom_Ids = collect(keys(DomData_dict))
     values = [DomData_dict[Dom] for Dom in Dom_Ids]
     ToolBox.plot_Doms_colored(Dom_Ids, values, detector, labels=labels, valuetyp=valuetyp, add_markersizes=add_markersizes, colored=colored, size_bounds=size_bounds)

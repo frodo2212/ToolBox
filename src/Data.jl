@@ -181,10 +181,10 @@ NOTIEREN WAS SIE GENAU MACHT
 UND WIE - ggf OPTIMIEREN    
 """
 #TODO: durchlaufen lassen - schauen wie lange das geht + was die macht 
-function DomData_Floors(detector::Detector, loadpath::String, storagepath::String; slice_length=6000)
+function DomData_Floors(detector::Detector, storagepath::String; slice_length=6000, loadpath::String="../Data/DomData_Doms")
     possible_files = glob(string("*",Int32(slice_length/600),".h5"), loadpath) 
     floors, Doms_on_floor, max_floor = ToolBox.Floors(detector)
-    file = h5open(string(loadpath,"/Data_",Doms_on_floor[1][1],".h5"), "r")  #meaga ranzig so, das muss anders gehen
+    file = h5open(string(loadpath,"/Dom_",Doms_on_floor[1][1],"_",string(Int32(slice_length/600)),".h5"), "r")
     Times = read(file["Time"])
     close(file)
     len = length(Times)
@@ -197,17 +197,22 @@ function DomData_Floors(detector::Detector, loadpath::String, storagepath::Strin
         prov_pmtmean = zeros(Float64, Dom_count, len, 31)
         for id in (1:Dom_count)
             Dom = Doms_on_floor[floor][id]
-            if string("Data_",Dom,".h5") in possible_files
-                file = h5open(string(loadpath,"/Data_",Dom,".h5"), "r")
+            filename = string(loadpath,"\\Dom_",Dom,"_",string(Int32(slice_length/600)),".h5")
+            if filename in possible_files
+                file = h5open(filename, "r")
                 if Times != read(file["Time"])
                     print("Zeiten passen nicht")
                     break
                 else  
+                    tmp_good_values = read(file["good_values"])
+                    tmp_pmtmean = read(file["pmtmean"])
+                    tmp_hrvcount = read(file["hrvcount"])
+                    tmp_fifocount = read(file["fifocount"])
                     for i in (1:len)
-                        good_values[floor,i] += read(file["good_values"])[i]
-                        prov_pmtmean[id,i,:] .= read(file["pmtmean"])[i,:]
-                        hrvcount[floor,i,:] += read(file["hrvcount"])[i,:]
-                        fifocount[floor,i,:] += read(file["fifocount"])[i,:]
+                        good_values[floor,i] += tmp_good_values[i]
+                        prov_pmtmean[id,i,:] .= tmp_pmtmean[i,:]
+                        hrvcount[floor,i,:] += tmp_hrvcount[i,:]
+                        fifocount[floor,i,:] += tmp_fifocount[i,:]
                     end
                 end
                 close(file)
@@ -218,7 +223,7 @@ function DomData_Floors(detector::Detector, loadpath::String, storagepath::Strin
         end
     end    
     mkpath(storagepath)
-    storagefile = h5open(string(storagepath,"/","DomData_floors_",Int32(slice_length/600),".h5"), "w")
+    storagefile = h5open(string(storagepath,"/DomData_floors_",Int32(slice_length/600),".h5"), "w")
     dset_time = create_dataset(storagefile, "Time", Int64, len)
     dset_good_values = create_dataset(storagefile, "good_values", Int64, max_floor, len)
     dset_pmtmean = create_dataset(storagefile, "pmtmean", Float64, max_floor, len, 31)
