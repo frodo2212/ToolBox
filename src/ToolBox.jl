@@ -48,7 +48,7 @@ struct linfitData
     slice_length::Int32
 end
 
-plot_DomData_Floors() = error("Extension not loaded")
+plot_DomData_Floors(test::String) = error("Extension not loaded")
 plot_DomData_PMT() = error("Extension not loaded")
 plot_DomData_Rings() = error("Extension not loaded")
 plot_DomData_linFit_array() = error("Extension not loaded")
@@ -59,6 +59,12 @@ plot_Strings() = error("Extension not loaded")
 plot_Doms() = error("Extension not loaded")
 plot_DomData() = error("Extension not loaded")
 plot_lf_Intervalls() = error("Extension not loaded")
+plot_surrounding_Doms() = error("Extension not loaded")
+plot_multiple_Doms() = error("Extension not loaded")
+plot_DomData_Drift() = error("Extension not loaded")
+plot_Det() = error("Extension not loaded")
+
+
 plot_Doms_3D() = error("Extension not loaded")
 plot_allDoms_3D() = error("Extension not loaded")
 plot_DomData_3D() = error("Extension not loaded")

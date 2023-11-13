@@ -1,4 +1,7 @@
 #das sind die Interaktiven plots, die sind aber nicht so gut...
+"""
+This was a test of interactive plotting with all the Options in GLMakie available
+"""
 function ToolBox.plot_DomData_Rings_interactive(DomID::Integer; loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000)
     fig = Figure()
     ax1 = Axis(fig[1,1],title ="DomData Rings")
@@ -49,6 +52,9 @@ function ToolBox.plot_DomData_Rings_interactive(DomID::Integer; loadpath::String
     return fig
 end
 
+"""
+given a Dom Id one can activate the PMT numbers that are plottet in the Graph for interactive visibility
+"""
 function ToolBox.plot_DomData_PMT_interactive(DomID::Integer; loadpath::String="../Data/DomData_Doms", alpha::Float64=1.0, slice_length::Integer=6000, shift_means::Bool=false)
     fig = Figure()
     ax1 = Axis(fig[1,1],title ="DomData PMTs")
@@ -81,7 +87,10 @@ function ToolBox.plot_DomData_PMT_interactive(DomID::Integer; loadpath::String="
     return fig
 end
 
-
+"""
+plots all Doms of the whole Detector in a 3D-Object and points out a given reference Dom
+one can then adjust all Doms closer than distance r to the referenceDom via Slider
+"""
 function ToolBox.plot_closeDoms_3D_interactive(Dom_Id::Int32, detector::Detector; range_bound::Tuple{Real,Real}=(0,200), stringnumbers::Bool=false, plot_allDoms::Bool=true)
     #static part
     Dom_positions = ToolBox.pos_Doms(detector)

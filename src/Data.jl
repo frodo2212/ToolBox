@@ -190,11 +190,13 @@ function DomData_Floors(detector::Detector, storagepath::String; slice_length=60
     len = length(Times)
     good_values = zeros(Int64, max_floor, len)
     pmtmean = Array{Float64}(undef, max_floor, len, 31)
+    shifted_pmtmean = Array{Float64}(undef, max_floor, len, 31)
     hrvcount = Array{Int64}(undef, max_floor, len, 31)
     fifocount = Array{Int64}(undef, max_floor, len, 31)
     for floor in (1:max_floor)
         Dom_count = length(Doms_on_floor[floor])
         prov_pmtmean = zeros(Float64, Dom_count, len, 31)
+        sh_prov_pmtmean = zeros(Float64, Dom_count, len, 31)
         for id in (1:Dom_count)
             Dom = Doms_on_floor[floor][id]
             filename = string(loadpath,"\\Dom_",Dom,"_",string(Int32(slice_length/600)),".h5")
@@ -206,11 +208,13 @@ function DomData_Floors(detector::Detector, storagepath::String; slice_length=60
                 else  
                     tmp_good_values = read(file["good_values"])
                     tmp_pmtmean = read(file["pmtmean"])
+                    sh_tmp_pmtmean = shift_pmtmeans(tmp_pmtmean)
                     tmp_hrvcount = read(file["hrvcount"])
                     tmp_fifocount = read(file["fifocount"])
                     for i in (1:len)
                         good_values[floor,i] += tmp_good_values[i]
                         prov_pmtmean[id,i,:] .= tmp_pmtmean[i,:]
+                        sh_prov_pmtmean[id,i,:] .= sh_tmp_pmtmean[i,:]
                         hrvcount[floor,i,:] += tmp_hrvcount[i,:]
                         fifocount[floor,i,:] += tmp_fifocount[i,:]
                     end
@@ -220,6 +224,7 @@ function DomData_Floors(detector::Detector, storagepath::String; slice_length=60
         end
         for time in (1:len)
             pmtmean[floor, time, :] = [mean(ToolBox.filternan(prov_pmtmean[:,time,i])) for i in (1:31)]
+            shifted_pmtmean[floor, time, :] = [mean(ToolBox.filternan(sh_prov_pmtmean[:,time,i])) for i in (1:31)]
         end
     end    
     mkpath(storagepath)
@@ -227,12 +232,69 @@ function DomData_Floors(detector::Detector, storagepath::String; slice_length=60
     dset_time = create_dataset(storagefile, "Time", Int64, len)
     dset_good_values = create_dataset(storagefile, "good_values", Int64, max_floor, len)
     dset_pmtmean = create_dataset(storagefile, "pmtmean", Float64, max_floor, len, 31)
+    dset_sh_pmtmean = create_dataset(storagefile, "shifted_pmtmean", Float64, max_floor, len, 31)
     dset_hrvcount = create_dataset(storagefile, "hrvcount", Int64, max_floor, len, 31)
     dset_fifocount = create_dataset(storagefile, "fifocount", Int64, max_floor, len, 31)
     write(dset_time, Times)
     write(dset_good_values, good_values)
     write(dset_pmtmean, pmtmean)
+    write(dset_sh_pmtmean, shifted_pmtmean)
     write(dset_hrvcount, hrvcount)
     write(dset_fifocount, fifocount)
     close(storagefile)
+end
+
+
+
+
+function mean_Detector(det::Detector; loadpath::String="../Data/DomData_Doms", slice_length::Integer=54000)
+    Doms = ToolBox.optical_DomIds(det)
+    datafile = h5open(string(loadpath, "/Dom_", Doms[1],"_",Int32(slice_length/600),".h5"), "r") 
+    Times = read(datafile["Time"])
+    len = length(Times)
+    close(datafile)
+    DomData = Matrix{Float64}(undef, length(Doms), len)
+    for i in (1:length(Doms))
+        datafile = h5open(string(loadpath, "/Dom_", Doms[i],"_",Int32(slice_length/600),".h5"), "r") 
+        DomData[i,:] = mean(read(datafile["pmtmean"]), dims = 2)
+        close(datafile)
+    end
+    Detector_mean = Float64[]
+    for i in (1:len)
+        push!(Detector_mean, mean(ToolBox.filternan(DomData[:,i])))
+    end
+    storagefile = h5open("../Data/DetectorData.h5", "w")
+    d_time = create_dataset(storagefile, "Time", Int64, len)
+    d_freq = create_dataset(storagefile, "frequency", Float64, len)
+    write(d_time, Times)
+    write(d_freq, Detector_mean)
+    close(storagefile)
+    return Times, Detector_mean, mean(Detector_mean)
+end
+
+function Detectormean(;loadpath::String="../Data", mean_Times::Bool=false)
+    recalculate && mean_Detector(det)
+    datafile = h5open(string(loadpath,"/DetectorData.h5"), "r")
+    frequencies = read(datafile["frequency"])
+    close(datafile)
+    mean_Times && (return mean(frequencies))
+    return frequencies
+end
+
+function linfit_Detector(;T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data", ignore_highs::Bool=true)
+    datafile = h5open(string(loadpath,"/DetectorData.h5"), "r")
+    frequencies = read(datafile["frequency"])
+    Times = read(datafile["Time"])
+    time_mask = ToolBox.maskTime(Times, T_intervall)
+    fit_Times = Times[time_mask] .- Times[time_mask][1]    
+    fit_freq = frequencies[time_mask]
+    if ignore_highs 
+        deleteat!(fit_Times, findall(x->x>=20000,fit_freq))
+        deleteat!(fit_freq, findall(x->x>=20000,fit_freq))
+    end
+    gerade(t, p) = p[1] .+ (p[2] .* t)
+    p0 = [fit_freq[1], 0]
+    fit = curve_fit(gerade, fit_Times, fit_freq, p0)
+    y = fit.param[1] - Times[1]*fit.param[2]
+    return (y,fit.param[2])
 end

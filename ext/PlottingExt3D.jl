@@ -7,9 +7,7 @@ module PlottingExt3D
     using DataFrames 
     using FileIO
     using GLMakie
-    include("interactivePlots.jl")
-    # brauche ich das??
-    # GLMakie.activate!()
+    # include("interactivePlots.jl")
     """
     plots the 3D konfiguration of a Detector
     """
@@ -44,6 +42,23 @@ module PlottingExt3D
         end
         fig
     end
+
+    function ToolBox.plot_allDoms_3D(detector1::Detector, detector2::Detector)
+        aspect=(1, 1, 1)
+        perspectiveness=0.5
+        Doms1 = ToolBox.optical_DomIds(detector1)
+        Doms2 = ToolBox.optical_DomIds(detector2)
+        fig = Figure(; resolution=(1200, 400))
+        ax1 = Axis3(fig[1, 1]; aspect, perspectiveness)
+        Dom_positions1 = ToolBox.pos_Doms(detector1)
+        positions1 = [v for (k,v) in Dom_positions1]
+        Dom_positions2 = ToolBox.pos_Doms(detector2)
+        positions2 = [v for (k,v) in Dom_positions2]
+        scatter!(ax1, positions1; markersize=7)
+        scatter!(ax1, positions2; markersize=12, color=:darkgreen) #meshscatter oder scatter ändern die Texture
+        fig
+    end
+
     """
     takes a DomId, range and detector the plots the whole detector, and marks all doms in the range of given reference Dom
     """

@@ -11,13 +11,25 @@ function optical_DomIds(detector::Detector)
     end
     return optical_Dom_Ids
 end
-
-function shift_pmtmeans(pmtmean::Matrix{Float64}; mean_goal::Float64=5500.0)
-    for pmt in (1:ToolBox.PMT_count)
-        pmtmean[:,pmt] = pmtmean[:,pmt] .+ (mean_goal-mean(pmtmean[:,pmt]))
+"""
+can shift PMT frequencies to a common mean value for better visibility of time evolution
+"""
+function shift_pmtmeans(pmtmean::Matrix{Float64}; mean_goal::Float64=5500.0, shift_to_matrixmean::Bool=false, activate_shift::Bool=true)
+    shift_to_matrixmean && (mean_goal = mean(pmtmean))
+    if activate_shift
+        for pmt in (1:ToolBox.PMT_count)
+            pmtmean[:,pmt] = pmtmean[:,pmt] .+ (mean_goal-mean(pmtmean[:,pmt]))
+        end
     end
     return pmtmean
 end
+function shift_pmtmeans(pmtmean::Vector{Float64}; mean_goal::Float64=5500.0, activate_shift::Bool=true)
+    if activate_shift
+        pmtmean = pmtmean .+ (mean_goal-mean(pmtmean))
+    end
+    return pmtmean
+end
+
 
 
 #positional functions
@@ -70,13 +82,24 @@ function pos_Strings(detector::Detector)
     String_positions = Dict(i=>(detector.modules[detector.locations[i,floors[1]].id].pos.x,detector.modules[detector.locations[i,floors[1]].id].pos.y) for i in detector.strings)
     return String_positions
 end
+function Doms_on_String(detector::Detector)
+    locations = collect(keys(detector.locations))
+    Doms_on_String = Dict(j=>Int32[] for j in detector.strings)
+    for j in detector.strings
+        for loc in locations
+            if loc[1] == j && loc[2] != 0
+                Doms_on_String[j] = push!(Doms_on_String[j], detector.locations[loc].id)
+            end
+        end
+    end
+    return Doms_on_String
+end
 """
 returns the x,y,z position of a Dom inside the Detector
 """
 function pos_Dom(Dom_Id::Integer, detector::Detector)
     return detector.modules[Dom_Id].pos.x, detector.modules[Dom_Id].pos.y, detector.modules[Dom_Id].pos.z
 end
-
 function pos_Doms(Dom_Ids::Vector{Int32}, detector::Detector)
     positions = Dict{Int32, Tuple{Float64,Float64,Float64}}
     for Dom in Dom_Ids
@@ -84,10 +107,10 @@ function pos_Doms(Dom_Ids::Vector{Int32}, detector::Detector)
     end
     return positions
 end
-
 function pos_Doms(detector::Detector)
     return pos_Doms(optical_DomIds(detector), detector)
 end    
+
 """
 for a DomId and given range in meter it returns all Doms in this radius of the reference Dom
 """
@@ -101,6 +124,7 @@ function close_Doms(Dom_Id::Integer, range::Real, detector::Detector)
     end
     return close_Doms
 end
+
 """
 just a simple distance function calculating the distance between 2 cartesian vectors
 """
@@ -110,6 +134,8 @@ function distance(PointA::Tuple{Float64,Float64,Float64}, PointB::Tuple{Float64,
     z = PointA[3]-PointB[3]
     return sqrt(x*x+y*y+z*z)
 end
+
+
 
 #Time functions
 """
@@ -122,13 +148,13 @@ function autoscale_time(time_start::Real, time_end::Real;intervalls::Integer=4)
     intervall_minutes = (time_end-time_start)/(60*intervalls)
     if intervall_minutes <= 60
         Zeiten = DataFrame(dates=unix2datetime(time_start) : Minute(ceil(intervall_minutes)) : unix2datetime(time_end))
-        Typ = "mm/dd/yyyyTHH:MM"
+        Typ = "yyyy-mm-dd HH:MM"
     elseif (intervall_minutes/60) <=24
         Zeiten = DataFrame(dates=unix2datetime(time_start) : Hour(ceil(intervall_minutes/60)) : unix2datetime(time_end))
-        Typ = "mm/dd/yyyyTHH"
+        Typ = "yyyy-mm-dd HH:MM"
     else 
-        Zeiten = DataFrame(dates=unix2datetime(time_start) : Day(ceil(intervall_minutes/1440)) : unix2datetime(time_end))
-        Typ = "mm/dd/yyyy"
+        Zeiten = DataFrame(dates=unix2datetime(time_start) : Day(floor(intervall_minutes/1440)) : unix2datetime(time_end))
+        Typ = "yyyy-mm-dd"
     end
     return (Zeiten, Typ)
 end
@@ -225,6 +251,8 @@ function maskTime(Times::Vector{T}, T_intervall::Tuple{Real,Real}) where T<: Int
     return T_mask
 end
   
+
+
 #saving and loading functions for Event and linfitData
 """
 saves Event Data from an Array in a .h5 file
@@ -310,6 +338,8 @@ function load_linfitData(Name::String; loadpath::String="./")
     return Events
 end
 
+
+
 #general functions for masking and deleting inf,nan,zero values in Vectors
 """
 takes a Vector and returns a mask with true for all elements, that aren't zero
@@ -324,6 +354,7 @@ function maskzero(Vektor::Vector{T}) where T <: Real
     end
     return mask
 end
+
 """
 takes a Vector of Vectors and removes all Elements that are Zero 
 """
@@ -334,6 +365,7 @@ function filterzero(array::Vector{Vector{T}}) where T<:Real
     end
     return neu
 end
+
 """
 takes a Vector and removes all Elements that are Zero 
 """
@@ -350,6 +382,7 @@ function filterzero(array::Vector{T}) where T<:Real
     end
     return neu
 end
+
 """
 takes a Vector and removes all Elements that are NaN 
 """
@@ -366,6 +399,7 @@ function filternan(array::Vector{T}) where T<:Real
     end
     return neu
 end
+
 """
 takes a Vector of Real values and masks every NaN value inside
 """
@@ -379,6 +413,7 @@ function masknan(Vektor::Vector{T}) where T <: Real
     end
     return mask
 end
+
 """
 takes a Vector of Real values and masks every Inf and every NaN value inside
 """
@@ -391,4 +426,17 @@ function maskinfnan(Vektor::Vector{T}) where T <: Real
         end
     end
     return mask
+end
+
+"""
+removes all the elements in a Vector that are double
+"""
+function deletedouble(vect::Vector{T}) where T<:Real
+    neu = T[]
+    for i in (1:length(vect))
+        if !(vect[i] in neu)
+            push!(neu, vect[i])
+        end
+    end
+    return neu
 end

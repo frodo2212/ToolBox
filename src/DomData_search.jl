@@ -33,13 +33,16 @@ end
 """
 does an intensive Search for all optical Doms of given Detector
 """
-function intSearch_DomData(detector::Detector, bound::Tuple{Integer, Integer}; threshold::Integer=6, loadpath::String="../Data/DomData_Doms", slice_length::Integer=6000)
+function intSearch_DomData(detector::Detector, bound::Tuple{Integer, Integer}; threshold::Integer=6, loadpath::String="../Data/DomData_Doms", slice_length::Integer=6000, count::Bool=false)
     Dom_ids = optical_DomIds(detector)
     globalEvents = Event[]
+    Dom_count = Dict{Int32, Int64}
     for Dom in Dom_ids
         Events = intSearch_DomData_Dom(Dom, bound, threshold=threshold, loadpath=loadpath, slice_length=slice_length)
+        Dom_count = merge!(Dom_count, Dict(Dom=>length(Events)))
         append!(globalEvents, Events)
     end
+    count && (return globalEvents, Dom_count)
     return globalEvents
 end
 
@@ -132,7 +135,7 @@ function linfit_DomData(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{I
         gerade(t, p) = p[1] .+ (p[2] .* t)
         p0 = [fit_pmtmean[nanmask][1], 0]
         fit = curve_fit(gerade, fit_Times[nanmask], fit_pmtmean[nanmask], p0)
-        y = fit.param[1]- fit_Times[nanmask][1]*fit.param[2]
+        y = fit.param[1] - Times[nanmask][1]*fit.param[2]
         if additional_Data
             return (y,fit.param[2]), (Times[1],Times[length(Times)])
         elseif return_function
@@ -146,6 +149,7 @@ function linfit_DomData(Dom_object::Tuple{Integer,Integer}; T_intervall::Tuple{I
     return (0,0)
 end
 
+#VORSICHT die hier mittelt noch, die anderen nicht - da vielleicht den Namen ändern
 function linfit_DomData(Dom_Id::Integer; T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", return_function::Bool=false, slice_length::Integer=54000, ignore_highs::Bool=true, additional_Data::Bool=false)
     datafile = h5open(string(loadpath, "/Dom_", Dom_Id,"_",Int32(slice_length/600),".h5"), "r")    
     pmtmean = vec(mean(read(datafile["pmtmean"]), dims=2))
@@ -183,37 +187,37 @@ either over the mean frequencies of the Doms or one specific pmt number of all D
 """
 function linfit_DomData(detector::Detector; pmt::Integer=0, T_intervall::Tuple{Integer,Integer}=(0,0), loadpath::String="../Data/DomData_Doms", slice_length::Integer=54000, ignore_highs::Bool=true, only_slopes::Bool=false)
     Dom_Ids = optical_DomIds(detector)
-    if only_slopes 
-        Data_dict = Dict{Int32,Float64}
-    else
-        Data_dict = Dict{Int32,Tuple{Float64,Float64}}
-    end
-    for Dom in Dom_Ids
-        if pmt == 0 || pmt > 31 #print an error if pmt > 31
-            params = linfit_DomData(Dom, T_intervall=T_intervall, loadpath=loadpath, slice_length=slice_length, ignore_highs=ignore_highs)
+        if only_slopes 
+            Data_dict = Dict{Int32,Float64}
         else
-            params = linfit_DomData((Dom,pmt), T_intervall=T_intervall, loadpath=loadpath, slice_length=slice_length, ignore_highs=ignore_highs)
+            Data_dict = Dict{Int32,Tuple{Float64,Float64}}
         end
-        if params != (0,0)
-            if only_slopes
-                Data_dict = merge!(Data_dict, Dict(Dom=>params[2]))
+        for Dom in Dom_Ids
+            if pmt == 0 || pmt > 31 #print an error if pmt > 31
+                params = linfit_DomData(Dom, T_intervall=T_intervall, loadpath=loadpath, slice_length=slice_length, ignore_highs=ignore_highs)
             else
-                Data_dict = merge!(Data_dict, Dict(Dom=>params))
+                params = linfit_DomData((Dom,pmt), T_intervall=T_intervall, loadpath=loadpath, slice_length=slice_length, ignore_highs=ignore_highs)
+            end
+            if params != (0,0)
+                if only_slopes
+                    Data_dict = merge!(Data_dict, Dict(Dom=>params[2]))
+                else
+                    Data_dict = merge!(Data_dict, Dict(Dom=>params))
+                end
             end
         end
-    end
     return Data_dict
 end
 """
 does a fit for all opticalDoms of given Detector and all its pmts over the whole time intervall
 returns the Data in a Vector of linfitData structs
 """
-function Search_linFitData(detector::Detector, threshold::Float64; mean_pmts::Bool=false, range::Tuple{Integer,Integer}=(1,378), loadpath::String="../Data/DomData_Doms", slice_length::Integer=54000)
+function Search_linFitData(detector::Detector, threshold::Float64; mean_pmts::Bool=false, range::Tuple{Integer,Integer}=(1,378), loadpath::String="../Data/DomData_Doms", slice_length::Integer=54000, ignore_highs::Bool=true)
     Dom_Ids = optical_DomIds(detector)
     Events = linfitData[]
-    for Dom in Dom_Ids[range[1]:range[2]]
+    for Dom in Dom_Ids# [range[1]:range[2]]
         if isfile(string(loadpath, "/Dom_", Dom,"_",Int32(slice_length/600),".h5"))
-            append!(Events, inner_Search_linFitData(Dom, threshold, mean_pmts=mean_pmts, loadpath=loadpath, Typ="S_lf_t2", slice_length=slice_length))
+            append!(Events, inner_Search_linFitData(Dom, threshold, mean_pmts=mean_pmts, loadpath=loadpath, Typ="S_lf_t2", slice_length=slice_length, ignore_highs=ignore_highs))
         end
     end
     return Events
@@ -223,10 +227,10 @@ end
 primarily an inside function not for external use
 takes a DomId and does a linear fit over the whole time intervall for all pmts
 """
-function inner_Search_linFitData(Dom_Id::Int32, threshold::Float64; mean_pmts::Bool=false, loadpath::String="../Data/DomData_Doms", Typ::String="inner_lf_t2", slice_length::Integer=6000)
+function inner_Search_linFitData(Dom_Id::Int32, threshold::Float64; mean_pmts::Bool=false, loadpath::String="../Data/DomData_Doms", Typ::String="inner_lf_t2", slice_length::Integer=6000, ignore_highs::Bool=true)
     Event = linfitData[]
     if mean_pmts
-        params, data = linfit_DomData(Dom_Id,loadpath=loadpath, slice_length=slice_length, additional_Data=true)
+        params, data = linfit_DomData(Dom_Id,loadpath=loadpath, slice_length=slice_length, additional_Data=true, ignore_highs=ignore_highs)
         if params[2] > threshold || params[2] < -threshold
             time = round(UInt32, (data[2]-data[1])/2)
             time_intervall = UInt32(data[2]-data[1])
@@ -234,7 +238,7 @@ function inner_Search_linFitData(Dom_Id::Int32, threshold::Float64; mean_pmts::B
         end
     else
         for pmt in (1:PMT_count)
-            params, data = linfit_DomData((Dom_Id,pmt),loadpath=loadpath, slice_length=slice_length, additional_Data=true)
+            params, data = linfit_DomData((Dom_Id,pmt),loadpath=loadpath, slice_length=slice_length, additional_Data=true, ignore_highs=ignore_highs)
             if params[2] > threshold || params[2] < -threshold
                 time = round(UInt32, (data[2]-data[1])/2)
                 time_intervall = UInt32(data[2]-data[1])
